@@ -2,10 +2,12 @@ mod color;
 mod db;
 
 use color::{extract_colors_from_text, Color};
+use iced::keyboard;
 use iced::widget::{
-    button, canvas, checkbox, column, container, row, scrollable, text, text_input, Canvas,
+    button, canvas, checkbox, column, container, operation, row, scrollable, text, text_input,
+    Canvas, Id,
 };
-use iced::{mouse, Element, Length, Rectangle, Renderer, Task, Theme};
+use iced::{mouse, Element, Length, Rectangle, Renderer, Subscription, Task, Theme};
 
 pub fn main() -> iced::Result {
     iced::application(Shard::new, Shard::update, Shard::view)
@@ -24,7 +26,12 @@ struct Shard {
     last_clipboard_content: Option<String>,
     editing_label: Option<(i64, String)>, // (color_id, current_edit_text)
     status_message: Option<String>,
+    filter_text: String,         // Search/filter text
+    selected_color: Option<i64>, // Currently selected color for keyboard actions
 }
+
+// Input field ID for keyboard focus
+const COLOR_INPUT_ID: &str = "color_input";
 
 #[derive(Debug, Clone)]
 enum Message {
@@ -55,6 +62,16 @@ enum Message {
     ToggleClipboard(bool),
     ClipboardTick,
     ClipboardContentReceived(Option<String>),
+
+    // Search/Filter
+    FilterChanged(String),
+
+    // Keyboard shortcuts
+    PasteFromClipboard,
+    FocusColorInput,
+    EscapePressed,
+    DeleteSelectedColor,
+    SelectColor(Option<i64>),
 }
 
 impl Shard {
@@ -309,20 +326,96 @@ impl Shard {
                 }
                 Task::none()
             }
+
+            Message::FilterChanged(text) => {
+                self.filter_text = text;
+                Task::none()
+            }
+
+            Message::PasteFromClipboard => {
+                // Read clipboard and try to add as color
+                Task::perform(
+                    async {
+                        match arboard::Clipboard::new() {
+                            Ok(mut clipboard) => clipboard.get_text().ok(),
+                            Err(_) => None,
+                        }
+                    },
+                    |content| {
+                        if let Some(text) = content {
+                            // Try to parse as color - send as ColorInputChanged then AddColor
+                            Message::ColorInputChanged(text)
+                        } else {
+                            Message::ColorInputChanged(String::new())
+                        }
+                    },
+                )
+            }
+
+            Message::FocusColorInput => operation::focus(COLOR_INPUT_ID),
+
+            Message::EscapePressed => {
+                // Priority: cancel label editing > clear filter > deselect
+                if self.editing_label.is_some() {
+                    self.editing_label = None;
+                } else if !self.filter_text.is_empty() {
+                    self.filter_text.clear();
+                } else {
+                    self.selected_color = None;
+                }
+                Task::none()
+            }
+
+            Message::DeleteSelectedColor => {
+                if let Some(id) = self.selected_color {
+                    self.selected_color = None;
+                    Task::perform(async move { db::delete_color(id) }, Message::ColorDeleted)
+                } else {
+                    Task::none()
+                }
+            }
+
+            Message::SelectColor(id) => {
+                self.selected_color = id;
+                Task::none()
+            }
         }
     }
 
-    fn subscription(&self) -> iced::Subscription<Message> {
-        if self.is_listening_clipboard {
+    fn subscription(&self) -> Subscription<Message> {
+        use keyboard::key;
+
+        let keyboard_sub = keyboard::listen().filter_map(|event| {
+            let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
+                return None;
+            };
+
+            match key.as_ref() {
+                keyboard::Key::Character("v") if modifiers.command() => {
+                    Some(Message::PasteFromClipboard)
+                }
+                keyboard::Key::Character("n") if modifiers.command() => {
+                    Some(Message::FocusColorInput)
+                }
+                keyboard::Key::Named(key::Named::Escape) => Some(Message::EscapePressed),
+                keyboard::Key::Named(key::Named::Delete) => Some(Message::DeleteSelectedColor),
+                _ => None,
+            }
+        });
+
+        let clipboard_sub = if self.is_listening_clipboard {
             iced::time::every(std::time::Duration::from_millis(500)).map(|_| Message::ClipboardTick)
         } else {
-            iced::Subscription::none()
-        }
+            Subscription::none()
+        };
+
+        Subscription::batch([keyboard_sub, clipboard_sub])
     }
 
     fn view(&self) -> Element<'_, Message> {
         // Header with input and controls
         let color_input = text_input("Enter color (hex, rgb, hsl)...", &self.color_input)
+            .id(Id::from(COLOR_INPUT_ID))
             .on_input(Message::ColorInputChanged)
             .on_submit(Message::AddColor)
             .width(Length::FillPortion(3))
@@ -351,7 +444,29 @@ impl Shard {
         .spacing(5)
         .align_y(iced::Alignment::Center);
 
-        let input_row = row![color_input, add_button, clipboard_toggle]
+        // Filter input with clear button
+        let filter_input = text_input("Filter...", &self.filter_text)
+            .on_input(Message::FilterChanged)
+            .width(Length::Fixed(150.0))
+            .padding(10)
+            .size(14);
+
+        let filter_section: Element<'_, Message> = if self.filter_text.is_empty() {
+            filter_input.into()
+        } else {
+            row![
+                filter_input,
+                button(text("×").size(14))
+                    .on_press(Message::FilterChanged(String::new()))
+                    .padding(10)
+                    .style(button::text)
+            ]
+            .spacing(5)
+            .align_y(iced::Alignment::Center)
+            .into()
+        };
+
+        let input_row = row![color_input, add_button, clipboard_toggle, filter_section,]
             .spacing(10)
             .padding(15)
             .align_y(iced::Alignment::Center);
@@ -369,7 +484,22 @@ impl Shard {
             container(text("")).into()
         };
 
-        // Color palette
+        // Color palette with filtering
+        let filtered_colors: Vec<&Color> = if self.filter_text.trim().is_empty() {
+            self.colors.iter().collect()
+        } else {
+            let query = self.filter_text.to_lowercase();
+            self.colors
+                .iter()
+                .filter(|c| {
+                    c.label.to_lowercase().contains(&query)
+                        || c.to_hex().to_lowercase().contains(&query)
+                        || c.to_rgb().to_lowercase().contains(&query)
+                        || c.to_hsl().to_lowercase().contains(&query)
+                })
+                .collect()
+        };
+
         let colors_list: Element<'_, Message> = if self.colors.is_empty() {
             container(
                 text("No colors yet. Add a color above or enable clipboard listening.")
@@ -379,9 +509,17 @@ impl Shard {
             .padding(20)
             .center_x(Length::Fill)
             .into()
+        } else if filtered_colors.is_empty() {
+            container(
+                text(format!("No colors match '{}'", self.filter_text))
+                    .size(14)
+                    .color(iced::Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+            )
+            .padding(20)
+            .center_x(Length::Fill)
+            .into()
         } else {
-            let items: Vec<Element<'_, Message>> = self
-                .colors
+            let items: Vec<Element<'_, Message>> = filtered_colors
                 .iter()
                 .map(|color| self.view_color_card(color))
                 .collect();
@@ -396,7 +534,11 @@ impl Shard {
             .status_message
             .clone()
             .unwrap_or_else(|| "Ready".to_string());
-        let color_count = format!("{} colors", self.colors.len());
+        let color_count = if self.filter_text.trim().is_empty() {
+            format!("{} colors", self.colors.len())
+        } else {
+            format!("{} / {} colors", filtered_colors.len(), self.colors.len())
+        };
         let status_bar = row![
             text(color_count).size(12),
             text("|").size(12),
@@ -410,6 +552,8 @@ impl Shard {
     }
 
     fn view_color_card<'a>(&'a self, color: &'a Color) -> Element<'a, Message> {
+        let is_selected = self.selected_color == Some(color.id);
+
         let swatch = Canvas::new(ColorSwatch {
             color: color.to_iced_color(),
         })
@@ -479,18 +623,31 @@ impl Shard {
             .padding(10)
             .align_y(iced::Alignment::Center);
 
-        container(card)
-            .style(|theme: &Theme| {
+        let color_id = color.id;
+        let card_container = container(card)
+            .style(move |theme: &Theme| {
                 let palette = theme.extended_palette();
+                let border_color = if is_selected {
+                    iced::Color::from_rgb(0.4, 0.7, 1.0) // Highlight selected
+                } else {
+                    palette.background.strong.color
+                };
+                let border_width = if is_selected { 2.0 } else { 1.0 };
                 container::Style::default()
                     .background(palette.background.weak.color)
                     .border(iced::Border {
-                        color: palette.background.strong.color,
-                        width: 1.0,
+                        color: border_color,
+                        width: border_width,
                         radius: 8.0.into(),
                     })
             })
-            .width(Length::Fill)
+            .width(Length::Fill);
+
+        // Wrap in a button for click-to-select
+        button(card_container)
+            .on_press(Message::SelectColor(Some(color_id)))
+            .style(|_theme, _status| button::Style::default())
+            .padding(0)
             .into()
     }
 

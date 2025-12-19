@@ -56,6 +56,17 @@ The app has been refactored from a text editor into a color palette manager.
 - [x] **Status Bar**
     - [x] Show color count
     - [x] Show last action/status message
+- [x] **Search/Filter**
+    - [x] Filter input field in header row
+    - [x] Filter colors by label or hex value
+    - [x] Clear filter button (×)
+    - [x] Status bar shows filtered count (X / Y colors)
+- [x] **Keyboard Shortcuts**
+    - [x] Ctrl+V to paste/add color from clipboard
+    - [x] Ctrl+N to focus color input
+    - [x] Escape to cancel editing / clear filter / deselect
+    - [x] Delete to remove selected color
+    - [x] Click-to-select colors with visual highlight
 
 ### Behavior
 - [x] **Duplicate Handling**
@@ -67,12 +78,20 @@ The app has been refactored from a text editor into a color palette manager.
 
 ## Future Improvements
 
-### UI Enhancements
-- [ ] Color picker widget (visual color selection)
-- [ ] Drag-and-drop to reorder colors
-- [ ] Group colors into palettes/categories
-- [ ] Search/filter colors by label or value
-- [ ] Keyboard shortcuts (Ctrl+V to add from clipboard, etc.)
+### UI Enhancements (Planned Phases)
+- [ ] **Phase 3: Color Picker Modal** (~3-4 hours)
+    - [ ] Full HSL/RGB color picker with sliders
+    - [ ] Add new colors via picker
+    - [ ] Edit existing colors
+- [ ] **Phase 4: Palettes/Categories** (~4-5 hours)
+    - [ ] Create/rename/delete palettes
+    - [ ] Colors can belong to multiple palettes
+    - [ ] Filter by palette
+    - [ ] Show palette badges on colors
+- [ ] **Phase 5: Drag-and-Drop Reordering** (~4-5 hours)
+    - [ ] Drag colors to reorder
+    - [ ] Visual feedback during drag
+    - [ ] Persist order to database
 
 ### Export/Import
 - [ ] Export palette as JSON
