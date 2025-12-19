@@ -1,54 +1,93 @@
 # Shard Project Plan & Todo
 
-## Phase 1: Project Initialization & Layout
-- [x] **Setup Application Structure**
-    - [x] Define `Shard` struct with core state fields.
-    - [x] Implement `iced::application` entry point in `src/main.rs`.
-    - [x] Create `Message` enum with variants for different domains (`Editor`, `Regex`, `Snippet`).
-- [x] **Basic UI Layout**
-    - [x] Implement `view` function with a Column.
-    - [x] Create Top Toolbar (Row) for Regex controls.
-    - [x] Create Main Content Area (Row) splitting Editor (Left) and Sidebar (Right).
+## Current Version: Color Palette Manager
 
-## Phase 2: Core Editor Features
-- [x] **Text Editor Implementation**
-    - [x] Add `text_editor::Content` to `Shard` state.
-    - [x] Integrate `iced::widget::text_editor` into the left column.
-    - [x] Handle `EditorMessage::Edit` to update content.
-- [x] **Syntax Highlighting**
-    - [x] Configure `text_editor` with `iced::highlighter`.
-    - [x] Pick a default theme (e.g., `Theme::Dark`).
-    - [ ] **Improvement**: Auto-detect language (currently hardcoded to "rs").
+The app has been refactored from a text editor into a color palette manager.
 
-## Phase 3: Regex Batch Processing
-- [x] **Regex UI**
-    - [x] Add text inputs for "Pattern" and "Replacement" in the Toolbar.
-    - [x] Add "Replace All" button.
-- [x] **Regex Logic**
-    - [x] Implement `RegexMessage` handling.
-    - [x] Create an async `Task` using `tokio` and `regex` crate to perform replacements without freezing UI.
-    - [x] Handle regex compilation errors (display in status bar or near input).
+## Completed Features
 
-## Phase 4: Snippet Management
-- [x] **Snippet Data Structure**
-    - [x] Define `Snippet` struct (id, title/preview, content).
-    - [x] Add `snippets: Vec<Snippet>` to `Shard`.
-- [x] **Sidebar UI**
-    - [x] Implement `view_snippets` helper.
-    - [x] Use `Scrollable` for the list.
-    - [x] Render each snippet as a card with "Load", "Copy", "Delete" buttons.
-- [x] **Snippet Actions**
-    - [x] Implement "Pin Current Text" logic.
-    - [x] Implement "Load Snippet" (replace editor content).
-    - [x] Implement "Delete Snippet".
-    - [x] Implement "Copy Snippet" to clipboard (using `arboard`).
+### Core Infrastructure
+- [x] **Application Structure**
+    - [x] Define `Shard` struct with color palette state
+    - [x] Implement `iced::application` entry point
+    - [x] Create `Message` enum for all user interactions
 
-## Phase 5: Clipboard & Smart Features
-- [x] **Clipboard Listener**
-    - [x] Add toggle in UI for "Listen to Clipboard".
-    - [x] Implement a background subscription/loop to check clipboard content using `arboard`.
-    - [x] Auto-pin or notify on clipboard change.
-- [ ] **Status & Polish**
-    - [ ] **Improvement**: Add Line/Col numbers to Status Bar (need to find API).
-    - [ ] Style the application (spacing, padding, colors).
-    - [ ] **Smart Content Recognition**: Color previews, etc.
+### Color Parsing (`src/color.rs`)
+- [x] **Multi-format Support**
+    - [x] Parse hex colors: `#RGB`, `#RRGGBB`, `#RRGGBBAA`
+    - [x] Parse RGB/RGBA: `rgb(r, g, b)`, `rgba(r, g, b, a)`
+    - [x] Parse HSL/HSLA: `hsl(h, s%, l%)`, `hsla(h, s%, l%, a)`
+- [x] **Format Conversion**
+    - [x] Convert to hex string
+    - [x] Convert to rgb/rgba string
+    - [x] Convert to hsl/hsla string
+- [x] **Color Extraction**
+    - [x] Extract all colors from arbitrary text (for clipboard detection)
+
+### Database Persistence (`src/db.rs`)
+- [x] **SQLite Storage**
+    - [x] Store colors with RGBA values, label, and position
+    - [x] Auto-create database in user data directory
+    - [x] Load colors on startup
+- [x] **CRUD Operations**
+    - [x] Insert new colors
+    - [x] Update color labels
+    - [x] Delete colors
+    - [x] Move color to top (for duplicate handling)
+
+### User Interface (`src/main.rs`)
+- [x] **Color Input**
+    - [x] Text input field for entering color values
+    - [x] Real-time validation with error feedback (red border)
+    - [x] Add button to save colors
+- [x] **Color Palette Display**
+    - [x] Scrollable list of color cards
+    - [x] Visual color swatch with checkerboard for transparency
+    - [x] Display hex value
+    - [x] Editable labels (click to edit)
+- [x] **Copy Actions**
+    - [x] Copy as Hex
+    - [x] Copy as RGB
+    - [x] Copy as HSL
+- [x] **Clipboard Listening**
+    - [x] Toggle to enable/disable
+    - [x] Auto-detect colors from clipboard content
+    - [x] Auto-add detected colors to palette
+- [x] **Status Bar**
+    - [x] Show color count
+    - [x] Show last action/status message
+
+### Behavior
+- [x] **Duplicate Handling**
+    - [x] Detect duplicate colors by RGBA values
+    - [x] Move existing color to top instead of creating duplicate
+- [x] **Transparency Support**
+    - [x] Full RGBA/HSLA alpha channel support
+    - [x] Checkerboard background in swatches to visualize transparency
+
+## Future Improvements
+
+### UI Enhancements
+- [ ] Color picker widget (visual color selection)
+- [ ] Drag-and-drop to reorder colors
+- [ ] Group colors into palettes/categories
+- [ ] Search/filter colors by label or value
+- [ ] Keyboard shortcuts (Ctrl+V to add from clipboard, etc.)
+
+### Export/Import
+- [ ] Export palette as JSON
+- [ ] Export palette as CSS variables
+- [ ] Export palette as SCSS/SASS variables
+- [ ] Import colors from file
+- [ ] Import from image (color extraction)
+
+### Advanced Features
+- [ ] Color harmony suggestions (complementary, triadic, etc.)
+- [ ] Color contrast checker (WCAG accessibility)
+- [ ] Color naming (auto-suggest names like "Ocean Blue")
+- [ ] Undo/redo for color operations
+- [ ] Dark/light theme toggle
+
+### Performance
+- [ ] Cache color swatches to avoid redrawing
+- [ ] Lazy loading for large palettes
