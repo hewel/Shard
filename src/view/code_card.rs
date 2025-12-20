@@ -34,33 +34,6 @@ pub fn view_code_card<'a>(
 
     let is_editing = editing_label.map(|(eid, _)| *eid) == Some(id);
 
-    let label_element: Element<'_, Message> = if is_editing {
-        let edit_text = editing_label.map(|(_, t)| t.as_str()).unwrap_or("");
-        row![
-            text_input("Label...", edit_text)
-                .on_input(Message::EditLabelChanged)
-                .on_submit(Message::SaveLabel)
-                .width(Length::Fixed(150.0))
-                .padding(SPACE_SM)
-                .style(|theme, status| input_style(theme, status, false)),
-            button(text("Save").size(12))
-                .on_press(Message::SaveLabel)
-                .padding(SPACE_SM)
-                .style(primary_button_style),
-            button(text("Cancel").size(12))
-                .on_press(Message::CancelEditLabel)
-                .padding(SPACE_SM)
-                .style(secondary_button_style),
-        ]
-        .spacing(SPACE_SM)
-        .into()
-    } else {
-        button(text(label).size(15))
-            .on_press(Message::StartEditLabel(id))
-            .style(subtle_button_style)
-            .into()
-    };
-
     // Language badge and line count
     let language_badge = container(text(&code.language).size(11).color(TEXT_MUTED))
         .padding([2, 6])
@@ -96,9 +69,35 @@ pub fn view_code_card<'a>(
         .style(danger_button_style);
 
     let info_column = column![
-        row![label_element, language_badge]
-            .spacing(SPACE_SM)
-            .align_y(iced::Alignment::Center),
+        row![
+            if is_editing {
+                let edit_text = editing_label.map(|(_, t)| t.as_str()).unwrap_or("");
+                row![
+                    text_input("Label...", edit_text)
+                        .on_input(Message::EditLabelChanged)
+                        .on_submit(Message::SaveLabel)
+                        .width(Length::Fixed(150.0))
+                        .padding(SPACE_SM)
+                        .style(|theme, status| input_style(theme, status, false)),
+                    button(text("Save").size(12))
+                        .on_press(Message::SaveLabel)
+                        .padding(SPACE_SM)
+                        .style(primary_button_style),
+                    button(text("Cancel").size(12))
+                        .on_press(Message::CancelEditLabel)
+                        .padding(SPACE_SM)
+                        .style(secondary_button_style),
+                ]
+                .spacing(SPACE_SM)
+            } else {
+                row![button(text(label).size(15))
+                    .on_press(Message::StartEditLabel(id))
+                    .style(subtle_button_style)]
+            },
+            language_badge
+        ]
+        .spacing(SPACE_SM)
+        .align_y(iced::Alignment::Center),
         preview_text,
         line_count,
     ]

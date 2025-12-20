@@ -29,33 +29,6 @@ pub fn view_color_card<'a>(
 
     let is_editing = editing_label.map(|(eid, _)| *eid) == Some(id);
 
-    let label_element: Element<'_, Message> = if is_editing {
-        let edit_text = editing_label.map(|(_, t)| t.as_str()).unwrap_or("");
-        row![
-            text_input("Label...", edit_text)
-                .on_input(Message::EditLabelChanged)
-                .on_submit(Message::SaveLabel)
-                .width(Length::Fixed(150.0))
-                .padding(SPACE_SM)
-                .style(|theme, status| input_style(theme, status, false)),
-            button(text("Save").size(12))
-                .on_press(Message::SaveLabel)
-                .padding(SPACE_SM)
-                .style(primary_button_style),
-            button(text("Cancel").size(12))
-                .on_press(Message::CancelEditLabel)
-                .padding(SPACE_SM)
-                .style(secondary_button_style),
-        ]
-        .spacing(SPACE_SM)
-        .into()
-    } else {
-        button(text(label).size(15))
-            .on_press(Message::StartEditLabel(id))
-            .style(subtle_button_style)
-            .into()
-    };
-
     // Hex display
     let hex_display = text(color.to_hex()).size(12).color(TEXT_MUTED);
 
@@ -92,7 +65,34 @@ pub fn view_color_card<'a>(
         .padding([SPACE_XS, SPACE_SM])
         .style(danger_button_style);
 
-    let info_column = column![label_element, hex_display].spacing(SPACE_XS);
+    let info_column = column![
+        if is_editing {
+            let edit_text = editing_label.map(|(_, t)| t.as_str()).unwrap_or("");
+            row![
+                text_input("Label...", edit_text)
+                    .on_input(Message::EditLabelChanged)
+                    .on_submit(Message::SaveLabel)
+                    .width(Length::Fixed(150.0))
+                    .padding(SPACE_SM)
+                    .style(|theme, status| input_style(theme, status, false)),
+                button(text("Save").size(12))
+                    .on_press(Message::SaveLabel)
+                    .padding(SPACE_SM)
+                    .style(primary_button_style),
+                button(text("Cancel").size(12))
+                    .on_press(Message::CancelEditLabel)
+                    .padding(SPACE_SM)
+                    .style(secondary_button_style),
+            ]
+            .spacing(SPACE_SM)
+        } else {
+            row![button(text(label).size(15))
+                .on_press(Message::StartEditLabel(id))
+                .style(subtle_button_style)]
+        },
+        hex_display
+    ]
+    .spacing(SPACE_XS);
 
     let card = row![
         swatch,
