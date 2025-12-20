@@ -143,18 +143,23 @@ The app manages three types of snippets: Colors, Code, and Text.
 - [ ] Import colors from image
 
 ### External Editor Integration
-- [ ] **Open in External Editor**
-    - [ ] Settings for editor command (vscode, helix, nvim, etc.)
-    - [ ] "Open in Editor" button on code/text cards
-    - [ ] Create temp file with snippet content
-    - [ ] Launch editor with temp file path
-    - [ ] Watch for file changes and update snippet
-    - [ ] Clean up temp files on app close
-- [ ] **Editor Presets**
-    - [ ] VSCode: `code --wait {file}`
-    - [ ] Helix: `hx {file}`
-    - [ ] Neovim: `nvim {file}`
-    - [ ] Custom command with `{file}` placeholder
+- [x] **Open in External Editor**
+    - [x] Settings for editor command (vscode, helix, nvim, etc.)
+    - [x] "Open in Editor" button on code/text cards
+    - [x] Create temp file with snippet content
+    - [x] Launch editor with temp file path
+    - [x] Update snippet when editor closes
+- [x] **Editor Presets**
+    - [x] VSCode: `code --wait {file}`
+    - [x] Helix: `hx {file}`
+    - [x] Neovim: `nvim {file}`
+    - [x] Vim: `vim {file}`
+    - [x] Custom command with `{file}` placeholder
+- [x] **Settings UI**
+    - [x] Gear icon in header opens settings modal
+    - [x] Radio-style preset selection
+    - [x] Custom command input
+    - [x] Config saved to `~/.config/shard/config.toml`
 
 ### Advanced Features
 - [ ] Color harmony suggestions (complementary, triadic, etc.)
