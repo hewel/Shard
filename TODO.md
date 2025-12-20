@@ -142,6 +142,20 @@ The app manages three types of snippets: Colors, Code, and Text.
 - [ ] Import snippets from file
 - [ ] Import colors from image
 
+### External Editor Integration
+- [ ] **Open in External Editor**
+    - [ ] Settings for editor command (vscode, helix, nvim, etc.)
+    - [ ] "Open in Editor" button on code/text cards
+    - [ ] Create temp file with snippet content
+    - [ ] Launch editor with temp file path
+    - [ ] Watch for file changes and update snippet
+    - [ ] Clean up temp files on app close
+- [ ] **Editor Presets**
+    - [ ] VSCode: `code --wait {file}`
+    - [ ] Helix: `hx {file}`
+    - [ ] Neovim: `nvim {file}`
+    - [ ] Custom command with `{file}` placeholder
+
 ### Advanced Features
 - [ ] Color harmony suggestions (complementary, triadic, etc.)
 - [ ] Color contrast checker (WCAG accessibility)

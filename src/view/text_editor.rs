@@ -63,14 +63,27 @@ pub fn view_text_editor_modal(editor: &TextEditorState) -> Element<'_, Message> 
     };
 
     // Header
+    let external_editor_button = if let Some(id) = editor.editing_id {
+        button(icons::arrow_square_out().size(14))
+            .on_press(Message::OpenInExternalEditor(id, false))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style)
+    } else {
+        button(icons::arrow_square_out().size(14))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style)
+    };
+
     let header_row = row![
         text(title).size(20).color(TEXT_PRIMARY),
         iced::widget::Space::new().width(Length::Fill),
+        external_editor_button,
         button(icons::x().size(16))
             .on_press(Message::CloseTextEditor)
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
     ]
+    .spacing(SPACE_XS)
     .align_y(iced::Alignment::Center);
 
     // Text editor

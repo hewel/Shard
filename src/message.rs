@@ -25,6 +25,12 @@ pub enum Message {
     SnippetDeleted(Result<i64, String>),
     SelectSnippet(Option<i64>),
 
+    // === External Editor ===
+    /// Open snippet in external editor (snippet_id, is_code: true=code, false=text)
+    OpenInExternalEditor(i64, bool),
+    /// Editor closed, content returned (snippet_id, new_content, is_code)
+    ExternalEditorClosed(Result<(i64, String, bool), String>),
+
     // === Clipboard Listening ===
     ToggleClipboard(bool),
     ClipboardTick,

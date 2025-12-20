@@ -361,6 +361,30 @@ pub fn update_code(
     get_snippet_by_id(id)?.ok_or_else(|| "Snippet not found".to_string())
 }
 
+/// Update only the code content of a code snippet (preserves language and label).
+pub fn update_code_content(id: i64, code: String) -> Result<Snippet, String> {
+    let conn = open_connection()?;
+    conn.execute(
+        "UPDATE snippets SET code = ?1 WHERE id = ?2 AND kind = 'code'",
+        params![code, id],
+    )
+    .map_err(|e| format!("Update error: {}", e))?;
+
+    get_snippet_by_id(id)?.ok_or_else(|| "Snippet not found".to_string())
+}
+
+/// Update only the text content of a text snippet (preserves label).
+pub fn update_text_content(id: i64, text: String) -> Result<Snippet, String> {
+    let conn = open_connection()?;
+    conn.execute(
+        "UPDATE snippets SET text_content = ?1 WHERE id = ?2 AND kind = 'text'",
+        params![text, id],
+    )
+    .map_err(|e| format!("Update error: {}", e))?;
+
+    get_snippet_by_id(id)?.ok_or_else(|| "Snippet not found".to_string())
+}
+
 /// Update a text snippet.
 pub fn update_text(id: i64, text: String, label: String) -> Result<Snippet, String> {
     let conn = open_connection()?;

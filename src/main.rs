@@ -2,6 +2,7 @@
 //!
 //! A desktop application for managing colors, code snippets, and text snippets.
 
+mod config;
 mod db;
 mod icons;
 mod message;

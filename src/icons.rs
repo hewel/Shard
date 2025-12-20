@@ -105,6 +105,11 @@ pub fn text_icon() -> text::Text<'static> {
     icon('\u{e48a}')
 }
 
+/// Arrow square out icon (for open in external editor)
+pub fn arrow_square_out() -> text::Text<'static> {
+    icon('\u{e5de}')
+}
+
 // === Icon constants for use in text widgets ===
 
 /// Code icon codepoint

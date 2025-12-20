@@ -53,6 +53,12 @@ pub fn view_text_card<'a>(
         .padding([SPACE_XS, SPACE_SM])
         .style(subtle_button_style);
 
+    // Open in external editor button
+    let external_editor_button = button(icons::arrow_square_out().size(14))
+        .on_press(Message::OpenInExternalEditor(id, false))
+        .padding([SPACE_XS, SPACE_SM])
+        .style(subtle_button_style);
+
     // Edit button
     let edit_button = button(icons::pencil().size(14))
         .on_press(Message::OpenTextEditor(Some(id)))
@@ -67,9 +73,14 @@ pub fn view_text_card<'a>(
 
     let info_column = column![text(label).size(15), preview_text, stats,].spacing(SPACE_XS);
 
-    let action_row = row![copy_button, edit_button, delete_button]
-        .spacing(SPACE_XS)
-        .align_y(iced::Alignment::Center);
+    let action_row = row![
+        copy_button,
+        external_editor_button,
+        edit_button,
+        delete_button
+    ]
+    .spacing(SPACE_XS)
+    .align_y(iced::Alignment::Center);
 
     let card = row![text_icon, info_column, action_row]
         .spacing(SPACE_MD)

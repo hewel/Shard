@@ -3,6 +3,7 @@
 use iced::widget::operation;
 use iced::Task;
 
+use crate::config::Config;
 use crate::db;
 use crate::message::Message;
 use crate::snippet::{
@@ -11,7 +12,6 @@ use crate::snippet::{
 use crate::view::{CodeEditorState, ColorPickerState, PickerMode, TextEditorState, COLOR_INPUT_ID};
 
 /// Application state.
-#[derive(Default)]
 pub struct Shard {
     pub snippets: Vec<Snippet>,
     pub color_input: String,
@@ -25,6 +25,27 @@ pub struct Shard {
     pub color_picker: Option<ColorPickerState>,
     pub code_editor: Option<CodeEditorState>,
     pub text_editor: Option<TextEditorState>,
+    pub config: Config,
+}
+
+impl Default for Shard {
+    fn default() -> Self {
+        Self {
+            snippets: Vec::new(),
+            color_input: String::new(),
+            input_error: None,
+            is_listening_clipboard: false,
+            last_clipboard_content: None,
+            status_message: None,
+            filter_text: String::new(),
+            filter_kind: None,
+            selected_snippet: None,
+            color_picker: None,
+            code_editor: None,
+            text_editor: None,
+            config: Config::load(),
+        }
+    }
 }
 
 impl Shard {
@@ -151,6 +172,72 @@ impl Shard {
 
             Message::SelectSnippet(id) => {
                 self.selected_snippet = id;
+                Task::none()
+            }
+
+            Message::OpenInExternalEditor(id, is_code) => {
+                // Find the snippet content
+                let Some(snippet) = self.snippets.iter().find(|s| s.id == id) else {
+                    self.status_message = Some("Snippet not found".to_string());
+                    return Task::none();
+                };
+
+                let content = match &snippet.content {
+                    SnippetContent::Code(code) => code.code.clone(),
+                    SnippetContent::Text(text) => text.text.clone(),
+                    SnippetContent::Color(_) => {
+                        self.status_message = Some("Cannot open colors in editor".to_string());
+                        return Task::none();
+                    }
+                };
+
+                // Get file extension
+                let extension = if is_code {
+                    if let SnippetContent::Code(code) = &snippet.content {
+                        language_to_extension(&code.language)
+                    } else {
+                        "txt"
+                    }
+                } else {
+                    "txt"
+                };
+
+                let config = self.config.clone();
+                self.status_message = Some("Opening in external editor...".to_string());
+
+                Task::perform(
+                    async move {
+                        open_in_external_editor(id, &content, extension, is_code, &config).await
+                    },
+                    Message::ExternalEditorClosed,
+                )
+            }
+
+            Message::ExternalEditorClosed(result) => {
+                match result {
+                    Ok((id, new_content, is_code)) => {
+                        // Update the snippet in memory and database
+                        if is_code {
+                            let content = new_content.clone();
+                            return Task::perform(
+                                async move {
+                                    // Get existing snippet to preserve language and label
+                                    db::update_code_content(id, content)
+                                },
+                                Message::SnippetUpdated,
+                            );
+                        } else {
+                            let content = new_content.clone();
+                            return Task::perform(
+                                async move { db::update_text_content(id, content) },
+                                Message::SnippetUpdated,
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        self.status_message = Some(format!("Editor error: {}", e));
+                    }
+                }
                 Task::none()
             }
 
@@ -569,4 +656,85 @@ async fn copy_to_clipboard(text: &str) -> Result<String, String> {
         }
         Err(e) => Err(e.to_string()),
     }
+}
+
+/// Map language name to file extension.
+fn language_to_extension(language: &str) -> &'static str {
+    match language.to_lowercase().as_str() {
+        "rust" => "rs",
+        "python" => "py",
+        "javascript" => "js",
+        "typescript" => "ts",
+        "json" => "json",
+        "html" => "html",
+        "css" => "css",
+        "sql" => "sql",
+        "shell" | "bash" | "sh" => "sh",
+        "go" => "go",
+        "c" => "c",
+        "cpp" | "c++" => "cpp",
+        "java" => "java",
+        "ruby" => "rb",
+        "php" => "php",
+        "swift" => "swift",
+        "kotlin" => "kt",
+        "scala" => "scala",
+        "yaml" | "yml" => "yaml",
+        "toml" => "toml",
+        "markdown" | "md" => "md",
+        "xml" => "xml",
+        _ => "txt",
+    }
+}
+
+/// Open content in external editor and return updated content when closed.
+async fn open_in_external_editor(
+    id: i64,
+    content: &str,
+    extension: &str,
+    is_code: bool,
+    config: &crate::config::Config,
+) -> Result<(i64, String, bool), String> {
+    use std::fs;
+    use std::process::Command;
+
+    // Create temp file
+    let temp_dir = std::env::temp_dir();
+    let file_name = format!("shard_snippet_{}.{}", id, extension);
+    let temp_path = temp_dir.join(&file_name);
+
+    // Write content to temp file
+    fs::write(&temp_path, content).map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    // Get command from config
+    let temp_path_str = temp_path.to_string_lossy().to_string();
+    let Some((program, args)) = config.editor.build_command(&temp_path_str) else {
+        // Clean up temp file
+        let _ = fs::remove_file(&temp_path);
+        return Err("No editor command configured".to_string());
+    };
+
+    // Run editor (blocking)
+    let result = Command::new(&program)
+        .args(&args)
+        .status()
+        .map_err(|e| format!("Failed to launch editor '{}': {}", program, e))?;
+
+    if !result.success() {
+        // Clean up temp file
+        let _ = fs::remove_file(&temp_path);
+        return Err(format!(
+            "Editor exited with code: {}",
+            result.code().unwrap_or(-1)
+        ));
+    }
+
+    // Read updated content
+    let new_content =
+        fs::read_to_string(&temp_path).map_err(|e| format!("Failed to read temp file: {}", e))?;
+
+    // Clean up temp file
+    let _ = fs::remove_file(&temp_path);
+
+    Ok((id, new_content, is_code))
 }
