@@ -94,3 +94,21 @@ pub fn arrow_clockwise() -> text::Text<'static> {
 pub fn x_circle() -> text::Text<'static> {
     icon('\u{e4f8}')
 }
+
+/// Code icon (for code snippets)
+pub fn code() -> text::Text<'static> {
+    icon('\u{e1bc}')
+}
+
+/// Text icon (for text snippets) - using TextT
+pub fn text_icon() -> text::Text<'static> {
+    icon('\u{e48a}')
+}
+
+// === Icon constants for use in text widgets ===
+
+/// Code icon codepoint
+pub const CODE_ICON: char = '\u{e1bc}';
+
+/// Text icon codepoint
+pub const TEXT_ICON: char = '\u{e48a}';

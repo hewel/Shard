@@ -1,64 +1,82 @@
-//! Application messages for the Shard color palette manager.
+//! Application messages for the Shard snippet manager.
 
-use crate::color::Color;
+use crate::snippet::{Snippet, SnippetKind};
 use crate::view::PickerMode;
 
 /// All messages that can be sent in the application.
 #[derive(Debug, Clone)]
 pub enum Message {
-    // Initialization
-    ColorsLoaded(Result<Vec<Color>, String>),
+    // === Initialization ===
+    SnippetsLoaded(Result<Vec<Snippet>, String>),
 
-    // Color input
+    // === Snippet Input (Color) ===
     ColorInputChanged(String),
-    AddColor,
-    ColorAdded(Result<Color, String>),
+    AddColorFromInput,
+    SnippetAdded(Result<Snippet, String>),
 
-    // Color actions
+    // === Unified Snippet Actions ===
+    CopySnippet(i64),
     CopyHex(i64),
     CopyRgb(i64),
     CopyHsl(i64),
+    CopyOklch(i64),
     CopyFinished(Result<String, String>),
-    DeleteColor(i64),
-    ColorDeleted(Result<i64, String>),
+    DeleteSnippet(i64),
+    SnippetDeleted(Result<i64, String>),
+    SelectSnippet(Option<i64>),
 
-    // Label editing
+    // === Label Editing ===
     StartEditLabel(i64),
     EditLabelChanged(String),
     SaveLabel,
     CancelEditLabel,
     LabelSaved(Result<(i64, String), String>),
 
-    // Clipboard listening
+    // === Clipboard Listening ===
     ToggleClipboard(bool),
     ClipboardTick,
     ClipboardContentReceived(Option<String>),
 
-    // Search/Filter
+    // === Filtering ===
     FilterChanged(String),
+    FilterKindChanged(Option<SnippetKind>),
 
-    // Keyboard shortcuts
+    // === Keyboard Shortcuts ===
     PasteFromClipboard,
     FocusColorInput,
     EscapePressed,
-    DeleteSelectedColor,
-    SelectColor(Option<i64>),
+    DeleteSelectedSnippet,
 
-    // Color picker
+    // === Color Picker ===
     OpenColorPicker(Option<i64>), // None = new color, Some(id) = edit existing
     CloseColorPicker,
     PickerModeChanged(PickerMode),
     PickerHueChanged(f32),
     PickerSaturationChanged(f32),
     PickerLightnessChanged(f32),
-    PickerSLChanged(f32, f32), // Combined saturation + lightness from SL box drag
+    PickerSLChanged(f32, f32),
     PickerAlphaChanged(f32),
     PickerLabelChanged(String),
-    // OKLCH mode messages
+    // OKLCH mode
     PickerOklchLChanged(f32),
     PickerOklchCChanged(f32),
     PickerOklchHChanged(f32),
-    PickerCLChanged(f32, f32), // Combined chroma + lightness from CL box drag
+    PickerCLChanged(f32, f32),
     ConfirmColorPicker,
-    ColorUpdated(Result<Color, String>),
+    SnippetUpdated(Result<Snippet, String>),
+
+    // === Code Editor ===
+    OpenCodeEditor(Option<i64>), // None = new, Some(id) = edit existing
+    CloseCodeEditor,
+    CodeEditorContentChanged(iced::widget::text_editor::Action),
+    CodeEditorLanguageChanged(String),
+    CodeEditorLabelChanged(String),
+    ConfirmCodeEditor,
+
+    // === Text Editor ===
+    OpenTextEditor(Option<i64>), // None = new, Some(id) = edit existing
+    CloseTextEditor,
+    TextEditorContentChanged(iced::widget::text_editor::Action),
+    TextEditorLabelChanged(String),
+    ConfirmTextEditor,
 }

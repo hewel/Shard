@@ -1,31 +1,36 @@
-//! Color card view component.
+//! Text snippet card view component.
 
-use iced::widget::{button, column, container, row, text, text_input, Canvas};
+use iced::widget::{button, column, container, row, text, text_input};
 use iced::{Element, Length};
 
 use crate::icons;
 use crate::message::Message;
-use crate::snippet::ColorData;
+use crate::snippet::TextData;
 use crate::theme::{
     card_style, danger_button_style, input_style, primary_button_style, secondary_button_style,
-    subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
+    subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
-use crate::widgets::ColorSwatch;
 
-/// Render a color card for the palette list.
-pub fn view_color_card<'a>(
+/// Render a text snippet card.
+pub fn view_text_card<'a>(
     id: i64,
     label: &'a str,
-    color: &'a ColorData,
+    text_data: &'a TextData,
     is_selected: bool,
     editing_label: Option<&'a (i64, String)>,
 ) -> Element<'a, Message> {
-    // Color swatch (72x72)
-    let swatch = Canvas::new(ColorSwatch {
-        color: color.to_iced_color(),
-    })
+    // Text icon placeholder
+    let text_icon = container(
+        text(icons::TEXT_ICON)
+            .size(32)
+            .font(icons::ICON_FONT)
+            .color(TEXT_SECONDARY),
+    )
     .width(72)
-    .height(72);
+    .height(72)
+    .center_x(72)
+    .center_y(72)
+    .style(|_theme| iced::widget::container::Style::default().background(BG_SURFACE));
 
     let is_editing = editing_label.map(|(eid, _)| *eid) == Some(id);
 
@@ -56,33 +61,31 @@ pub fn view_color_card<'a>(
             .into()
     };
 
-    // Hex display
-    let hex_display = text(color.to_hex()).size(12).color(TEXT_MUTED);
+    // Character/line count
+    let stats = text(format!(
+        "{} chars, {} lines",
+        text_data.char_count(),
+        text_data.line_count()
+    ))
+    .size(12)
+    .color(TEXT_MUTED);
 
-    // Copy buttons
-    let copy_buttons = row![
-        button(text("Hex").size(11))
-            .on_press(Message::CopyHex(id))
-            .padding([SPACE_XS, SPACE_SM])
-            .style(subtle_button_style),
-        button(text("RGB").size(11))
-            .on_press(Message::CopyRgb(id))
-            .padding([SPACE_XS, SPACE_SM])
-            .style(subtle_button_style),
-        button(text("HSL").size(11))
-            .on_press(Message::CopyHsl(id))
-            .padding([SPACE_XS, SPACE_SM])
-            .style(subtle_button_style),
-        button(text("OKLCH").size(11))
-            .on_press(Message::CopyOklch(id))
-            .padding([SPACE_XS, SPACE_SM])
-            .style(subtle_button_style),
-    ]
-    .spacing(SPACE_XS);
+    // Text preview (first 2 lines)
+    let preview = text_data.preview(2);
+    let preview_text = text(preview)
+        .size(11)
+        .color(TEXT_SECONDARY)
+        .width(Length::Fixed(300.0));
+
+    // Copy button
+    let copy_button = button(text("Copy").size(11))
+        .on_press(Message::CopySnippet(id))
+        .padding([SPACE_XS, SPACE_SM])
+        .style(subtle_button_style);
 
     // Edit button
     let edit_button = button(icons::pencil().size(14))
-        .on_press(Message::OpenColorPicker(Some(id)))
+        .on_press(Message::OpenTextEditor(Some(id)))
         .padding([SPACE_XS, SPACE_SM])
         .style(subtle_button_style);
 
@@ -92,24 +95,21 @@ pub fn view_color_card<'a>(
         .padding([SPACE_XS, SPACE_SM])
         .style(danger_button_style);
 
-    let info_column = column![label_element, hex_display].spacing(SPACE_XS);
+    let info_column = column![label_element, preview_text, stats,].spacing(SPACE_XS);
 
-    let card = row![
-        swatch,
-        info_column,
-        copy_buttons,
-        edit_button,
-        delete_button
-    ]
-    .spacing(SPACE_MD)
-    .padding(SPACE_MD)
-    .align_y(iced::Alignment::Center);
+    let action_row = row![copy_button, edit_button, delete_button]
+        .spacing(SPACE_XS)
+        .align_y(iced::Alignment::Center);
+
+    let card = row![text_icon, info_column, action_row]
+        .spacing(SPACE_MD)
+        .padding(SPACE_MD)
+        .align_y(iced::Alignment::Center);
 
     let card_container = container(card)
         .style(move |theme| card_style(theme, is_selected))
         .width(Length::Fill);
 
-    // Wrap in a button for click-to-select
     button(card_container)
         .on_press(Message::SelectSnippet(Some(id)))
         .style(|_theme, _status| button::Style::default())

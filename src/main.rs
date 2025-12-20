@@ -1,11 +1,11 @@
-//! Shard - Color Palette Manager
+//! Shard - Snippet Manager
 //!
-//! A desktop application for managing color palettes with clipboard integration.
+//! A desktop application for managing colors, code snippets, and text snippets.
 
-mod color;
 mod db;
 mod icons;
 mod message;
+mod snippet;
 mod theme;
 mod update;
 mod view;
@@ -19,7 +19,7 @@ pub use update::Shard;
 
 pub fn main() -> iced::Result {
     iced::application(Shard::new, Shard::update, Shard::view)
-        .title("Shard - Color Palette Manager")
+        .title("Shard - Snippet Manager")
         .font(icons::ICON_FONT_BYTES)
         .font(icons::TEXT_FONT_BYTES)
         .default_font(icons::TEXT_FONT)
@@ -32,15 +32,18 @@ impl Shard {
     /// Render the application view.
     pub fn view(&self) -> Element<'_, Message> {
         view::view(view::ViewContext {
-            colors: &self.colors,
+            snippets: &self.snippets,
             color_input: &self.color_input,
             input_error: self.input_error.as_deref(),
             is_listening_clipboard: self.is_listening_clipboard,
             editing_label: self.editing_label.as_ref(),
             status_message: self.status_message.as_deref(),
             filter_text: &self.filter_text,
-            selected_color: self.selected_color,
+            filter_kind: self.filter_kind.as_ref(),
+            selected_snippet: self.selected_snippet,
             color_picker: self.color_picker.as_ref(),
+            code_editor: self.code_editor.as_ref(),
+            text_editor: self.text_editor.as_ref(),
         })
     }
 
@@ -66,7 +69,7 @@ impl Shard {
                     Some(Message::FocusColorInput)
                 }
                 keyboard::Key::Named(key::Named::Escape) => Some(Message::EscapePressed),
-                keyboard::Key::Named(key::Named::Delete) => Some(Message::DeleteSelectedColor),
+                keyboard::Key::Named(key::Named::Delete) => Some(Message::DeleteSelectedSnippet),
                 _ => None,
             }
         });

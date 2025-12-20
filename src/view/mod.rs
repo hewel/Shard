@@ -1,22 +1,30 @@
 //! View module containing UI components.
 
+pub mod code_card;
+pub mod code_editor;
 pub mod color_card;
 pub mod color_picker;
+pub mod text_card;
+pub mod text_editor;
 
+pub use code_card::view_code_card;
+pub use code_editor::CodeEditorState;
 pub use color_card::view_color_card;
 pub use color_picker::{view_color_picker_modal, ColorPickerState, PickerMode};
+pub use text_card::view_text_card;
+pub use text_editor::TextEditorState;
 
 use iced::widget::{
     button, checkbox, column, container, row, scrollable, stack, text, text_input, Id,
 };
 use iced::{Element, Length};
 
-use crate::color::Color;
 use crate::icons;
 use crate::message::Message;
+use crate::snippet::{Snippet, SnippetContent, SnippetKind};
 use crate::theme::{
-    header_style, input_style, secondary_button_style, status_bar_style, BG_BASE, SPACE_MD,
-    SPACE_SM, TEXT_SECONDARY,
+    header_style, input_style, primary_button_style, secondary_button_style, status_bar_style,
+    BG_BASE, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_SECONDARY,
 };
 
 /// Input field ID for keyboard focus.
@@ -24,102 +32,103 @@ pub const COLOR_INPUT_ID: &str = "color_input";
 
 /// Context for rendering the main view.
 pub struct ViewContext<'a> {
-    pub colors: &'a [Color],
+    pub snippets: &'a [Snippet],
     pub color_input: &'a str,
     pub input_error: Option<&'a str>,
     pub is_listening_clipboard: bool,
     pub editing_label: Option<&'a (i64, String)>,
     pub status_message: Option<&'a str>,
     pub filter_text: &'a str,
-    pub selected_color: Option<i64>,
+    pub filter_kind: Option<&'a SnippetKind>,
+    pub selected_snippet: Option<i64>,
     pub color_picker: Option<&'a ColorPickerState>,
+    pub code_editor: Option<&'a CodeEditorState>,
+    pub text_editor: Option<&'a TextEditorState>,
 }
 
 /// Render the main application view.
 pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     let ViewContext {
-        colors,
+        snippets,
         color_input,
         input_error,
         is_listening_clipboard,
         editing_label,
         status_message,
         filter_text,
-        selected_color,
+        filter_kind,
+        selected_snippet,
         color_picker,
+        code_editor,
+        text_editor,
     } = ctx;
 
     let has_error = input_error.is_some();
 
     // Header with input and controls
-    let color_input_widget = text_input("Enter color (hex, rgb, hsl)...", color_input)
+    let color_input_widget = text_input("Enter color (hex, rgb, hsl, oklch)...", color_input)
         .id(Id::from(COLOR_INPUT_ID))
         .on_input(Message::ColorInputChanged)
-        .on_submit(Message::AddColor)
-        .width(Length::FillPortion(3))
+        .on_submit(Message::AddColorFromInput)
+        .width(Length::FillPortion(2))
         .padding(SPACE_SM)
         .style(move |theme, status| input_style(theme, status, has_error));
 
-    let add_button = button(
-        row![icons::plus().size(14), text("Add")]
-            .spacing(SPACE_SM)
-            .align_y(iced::Alignment::Center),
-    )
-    .on_press(Message::AddColor)
-    .padding(SPACE_SM)
-    .style(crate::theme::primary_button_style);
-
-    let picker_button = button(
-        row![icons::palette().size(14), text("Picker")]
-            .spacing(SPACE_SM)
+    // Add buttons for each snippet type
+    let add_color_button = button(
+        row![icons::palette().size(14), text("Color")]
+            .spacing(SPACE_XS)
             .align_y(iced::Alignment::Center),
     )
     .on_press(Message::OpenColorPicker(None))
+    .padding(SPACE_SM)
+    .style(primary_button_style);
+
+    let add_code_button = button(
+        row![icons::code().size(14), text("Code")]
+            .spacing(SPACE_XS)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::OpenCodeEditor(None))
+    .padding(SPACE_SM)
+    .style(secondary_button_style);
+
+    let add_text_button = button(
+        row![icons::text_icon().size(14), text("Text")]
+            .spacing(SPACE_XS)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::OpenTextEditor(None))
     .padding(SPACE_SM)
     .style(secondary_button_style);
 
     let clipboard_toggle = row![
         checkbox(is_listening_clipboard).on_toggle(Message::ToggleClipboard),
-        text("Listen Clipboard").size(14).color(TEXT_SECONDARY),
+        text("Listen").size(14).color(TEXT_SECONDARY),
     ]
-    .spacing(SPACE_SM)
+    .spacing(SPACE_XS)
     .align_y(iced::Alignment::Center);
 
-    // Filter input with clear button
+    // Filter input
     let filter_input = text_input("Filter...", filter_text)
         .on_input(Message::FilterChanged)
-        .width(Length::Fixed(150.0))
+        .width(Length::Fixed(120.0))
         .padding(SPACE_SM)
         .size(14)
         .style(|theme, status| input_style(theme, status, false));
 
-    let filter_section: Element<'_, Message> = if filter_text.is_empty() {
-        filter_input.into()
-    } else {
-        row![
-            filter_input,
-            button(icons::x_circle().size(14))
-                .on_press(Message::FilterChanged(String::new()))
-                .padding(SPACE_SM)
-                .style(secondary_button_style)
-        ]
-        .spacing(SPACE_SM)
-        .align_y(iced::Alignment::Center)
-        .into()
-    };
-
     let input_row = row![
         color_input_widget,
-        add_button,
-        picker_button,
+        add_color_button,
+        add_code_button,
+        add_text_button,
         clipboard_toggle,
-        filter_section,
+        filter_input,
     ]
     .spacing(SPACE_SM)
     .padding(SPACE_MD)
     .align_y(iced::Alignment::Center);
 
-    // Wrap header in container with header_style
     let header = container(input_row).width(Length::Fill).style(header_style);
 
     // Error message
@@ -136,34 +145,63 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         container(text("")).into()
     };
 
-    // Color palette with filtering
-    let filtered_colors: Vec<&Color> = if filter_text.trim().is_empty() {
-        colors.iter().collect()
-    } else {
-        let query = filter_text.to_lowercase();
-        colors
-            .iter()
-            .filter(|c| {
-                c.label.to_lowercase().contains(&query)
-                    || c.to_hex().to_lowercase().contains(&query)
-                    || c.to_rgb().to_lowercase().contains(&query)
-                    || c.to_hsl().to_lowercase().contains(&query)
-            })
-            .collect()
-    };
+    // Tab filter for snippet kinds
+    let tab_row = row![
+        tab_button(
+            "All",
+            filter_kind.is_none(),
+            Message::FilterKindChanged(None)
+        ),
+        tab_button(
+            "Colors",
+            filter_kind == Some(&SnippetKind::Color),
+            Message::FilterKindChanged(Some(SnippetKind::Color))
+        ),
+        tab_button(
+            "Code",
+            filter_kind == Some(&SnippetKind::Code),
+            Message::FilterKindChanged(Some(SnippetKind::Code))
+        ),
+        tab_button(
+            "Text",
+            filter_kind == Some(&SnippetKind::Text),
+            Message::FilterKindChanged(Some(SnippetKind::Text))
+        ),
+    ]
+    .spacing(SPACE_XS)
+    .padding([0.0, SPACE_MD]);
 
-    let colors_list: Element<'_, Message> = if colors.is_empty() {
+    // Filter snippets
+    let filtered_snippets: Vec<&Snippet> = snippets
+        .iter()
+        .filter(|s| {
+            // Filter by kind
+            if let Some(kind) = filter_kind {
+                if &s.kind() != kind {
+                    return false;
+                }
+            }
+            // Filter by text
+            if !filter_text.trim().is_empty() {
+                return s.matches_filter(filter_text);
+            }
+            true
+        })
+        .collect();
+
+    // Snippet list
+    let snippets_list: Element<'_, Message> = if snippets.is_empty() {
         container(
-            text("No colors yet. Add a color above or enable clipboard listening.")
+            text("No snippets yet. Add a color, code, or text snippet above.")
                 .size(14)
                 .color(TEXT_SECONDARY),
         )
         .padding(SPACE_MD)
         .center_x(Length::Fill)
         .into()
-    } else if filtered_colors.is_empty() {
+    } else if filtered_snippets.is_empty() {
         container(
-            text(format!("No colors match '{}'", filter_text))
+            text(format!("No snippets match '{}'", filter_text))
                 .size(14)
                 .color(TEXT_SECONDARY),
         )
@@ -171,11 +209,11 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .center_x(Length::Fill)
         .into()
     } else {
-        let items: Vec<Element<'_, Message>> = filtered_colors
+        let items: Vec<Element<'_, Message>> = filtered_snippets
             .iter()
-            .map(|color| {
-                let is_selected = selected_color == Some(color.id);
-                view_color_card(color, is_selected, editing_label)
+            .map(|snippet| {
+                let is_selected = selected_snippet == Some(snippet.id);
+                view_snippet_card(snippet, is_selected, editing_label)
             })
             .collect();
 
@@ -186,34 +224,83 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
 
     // Status bar
     let status_text = status_message.unwrap_or("Ready");
-    let color_count = if filter_text.trim().is_empty() {
-        format!("{} colors", colors.len())
+    let count_text = if filter_text.trim().is_empty() && filter_kind.is_none() {
+        format!("{} snippets", snippets.len())
     } else {
-        format!("{} / {} colors", filtered_colors.len(), colors.len())
+        format!("{} / {} snippets", filtered_snippets.len(), snippets.len())
     };
     let status_bar_content = row![
-        text(color_count).size(12).color(TEXT_SECONDARY),
+        text(count_text).size(12).color(TEXT_SECONDARY),
         text("|").size(12).color(TEXT_SECONDARY),
         text(status_text).size(12).color(TEXT_SECONDARY),
     ]
     .spacing(SPACE_SM)
     .padding(SPACE_SM);
 
-    // Wrap status bar in container with status_bar_style
     let status_bar = container(status_bar_content)
         .width(Length::Fill)
         .style(status_bar_style);
 
-    // Main layout with BG_BASE background
-    let main_content = container(column![header, error_text, colors_list, status_bar])
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
+    // Main layout
+    let main_content = container(column![
+        header,
+        error_text,
+        tab_row,
+        snippets_list,
+        status_bar
+    ])
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
 
-    // If color picker is open, show modal overlay
+    // Stack modals on top
     if let Some(picker) = color_picker {
         stack![main_content, view_color_picker_modal(picker)].into()
+    } else if let Some(editor) = code_editor {
+        stack![main_content, code_editor::view_code_editor_modal(editor)].into()
+    } else if let Some(editor) = text_editor {
+        stack![main_content, text_editor::view_text_editor_modal(editor)].into()
     } else {
         main_content.into()
+    }
+}
+
+/// Render a tab filter button.
+fn tab_button(label: &str, is_active: bool, on_press: Message) -> Element<'_, Message> {
+    button(text(label).size(12))
+        .on_press(on_press)
+        .padding([SPACE_XS, SPACE_SM])
+        .style(if is_active {
+            primary_button_style
+        } else {
+            secondary_button_style
+        })
+        .into()
+}
+
+/// Render a snippet card based on its type.
+fn view_snippet_card<'a>(
+    snippet: &'a Snippet,
+    is_selected: bool,
+    editing_label: Option<&'a (i64, String)>,
+) -> Element<'a, Message> {
+    match &snippet.content {
+        SnippetContent::Color(color) => view_color_card(
+            snippet.id,
+            &snippet.label,
+            color,
+            is_selected,
+            editing_label,
+        ),
+        SnippetContent::Code(code) => {
+            view_code_card(snippet.id, &snippet.label, code, is_selected, editing_label)
+        }
+        SnippetContent::Text(text_data) => view_text_card(
+            snippet.id,
+            &snippet.label,
+            text_data,
+            is_selected,
+            editing_label,
+        ),
     }
 }

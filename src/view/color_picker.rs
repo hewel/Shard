@@ -5,9 +5,11 @@ use iced::widget::{
 };
 use iced::{Element, Length};
 
-use crate::color::{hsl_to_rgb, oklch_to_rgb, rgb_to_hsl, rgb_to_oklch, Color};
 use crate::icons;
 use crate::message::Message;
+use crate::snippet::{
+    hsl_to_rgb, oklch_to_rgb, rgb_to_hsl, rgb_to_oklch, ColorData, Snippet, SnippetContent,
+};
 use crate::theme::{
     input_style, modal_dialog_style, modal_overlay_style, primary_button_style,
     secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
@@ -26,7 +28,7 @@ pub enum PickerMode {
 /// State for the color picker modal.
 #[derive(Debug, Clone)]
 pub struct ColorPickerState {
-    /// The color being edited (Some = editing existing, None = creating new)
+    /// The snippet being edited (Some = editing existing, None = creating new)
     pub editing_id: Option<i64>,
     /// Current picker mode (HSL or OKLCH)
     pub mode: PickerMode,
@@ -65,21 +67,25 @@ impl ColorPickerState {
         }
     }
 
-    /// Create a picker state for editing an existing color.
-    pub fn edit_color(color: &Color) -> Self {
-        let (h, s, l) = rgb_to_hsl(color.r, color.g, color.b);
-        let (ok_l, ok_c, ok_h) = rgb_to_oklch(color.r, color.g, color.b);
-        Self {
-            editing_id: Some(color.id),
-            mode: PickerMode::default(),
-            hue: h,
-            saturation: s,
-            lightness: l,
-            oklch_l: ok_l,
-            oklch_c: ok_c,
-            oklch_h: ok_h,
-            alpha: color.a,
-            label: color.label.clone(),
+    /// Create a picker state from an existing snippet.
+    pub fn from_snippet(snippet: &Snippet) -> Self {
+        if let SnippetContent::Color(color) = &snippet.content {
+            let (h, s, l) = rgb_to_hsl(color.r, color.g, color.b);
+            let (ok_l, ok_c, ok_h) = rgb_to_oklch(color.r, color.g, color.b);
+            Self {
+                editing_id: Some(snippet.id),
+                mode: PickerMode::default(),
+                hue: h,
+                saturation: s,
+                lightness: l,
+                oklch_l: ok_l,
+                oklch_c: ok_c,
+                oklch_h: ok_h,
+                alpha: color.a,
+                label: snippet.label.clone(),
+            }
+        } else {
+            Self::new_color()
         }
     }
 
@@ -97,14 +103,10 @@ impl ColorPickerState {
         iced::Color::from_rgba8(r, g, b, self.alpha)
     }
 
-    /// Get the current color as a Color struct.
-    pub fn to_color(&self) -> Color {
+    /// Get the current color as a ColorData struct.
+    pub fn to_color_data(&self) -> ColorData {
         let (r, g, b) = self.to_rgb();
-        let mut color = Color::new(r, g, b, self.alpha, self.label.clone());
-        if color.label.is_empty() {
-            color.label = color.default_label();
-        }
-        color
+        ColorData::new(r, g, b, self.alpha)
     }
 
     /// Sync HSL values from the current RGB (used when switching modes).
@@ -203,7 +205,9 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
         ))
         .size(12)
         .color(TEXT_SECONDARY),
-        text(picker.to_color().to_hex()).size(12).color(TEXT_MUTED),
+        text(picker.to_color_data().to_hex())
+            .size(12)
+            .color(TEXT_MUTED),
     ]
     .spacing(SPACE_XS);
 
@@ -214,7 +218,6 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
     // Build mode-specific controls
     let controls: Element<'_, Message> = match picker.mode {
         PickerMode::Hsl => {
-            // HSL Mode: SL box + S slider + L slider + Hue bar
             let sl_box = Canvas::new(SaturationLightnessBox {
                 hue: picker.hue,
                 saturation: picker.saturation,
@@ -262,7 +265,6 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
                 .into()
         }
         PickerMode::Oklch => {
-            // OKLCH Mode: CL box + L slider + C slider + H slider
             let cl_box = Canvas::new(ChromaLightnessBox {
                 hue: picker.oklch_h,
                 chroma: picker.oklch_c,
@@ -314,7 +316,7 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
         }
     };
 
-    // Alpha bar (shared between modes)
+    // Alpha bar
     let alpha_bar = Canvas::new(AlphaBar {
         color: {
             let (r, g, b) = picker.to_rgb();
@@ -370,10 +372,9 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
     .padding(SPACE_MD)
     .width(Length::Fixed(320.0));
 
-    // Modal dialog with modal_dialog_style
     let modal_dialog = container(modal_content).style(modal_dialog_style);
 
-    // Semi-transparent overlay that closes the modal when clicked
+    // Semi-transparent overlay
     let overlay = mouse_area(
         container(opaque(modal_dialog))
             .width(Length::Fill)

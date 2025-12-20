@@ -1,4 +1,4 @@
-//! Color parsing and conversion utilities.
+//! Color data and parsing utilities.
 //!
 //! Supports parsing colors from:
 //! - Hex: `#RGB`, `#RRGGBB`, `#RRGGBBAA`
@@ -9,31 +9,27 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-/// A color with RGBA components.
+/// Color data with RGBA components.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Color {
-    pub id: i64,
+pub struct ColorData {
     pub r: u8,
     pub g: u8,
     pub b: u8,
     pub a: f32, // 0.0 to 1.0
-    pub label: String,
 }
 
-impl Color {
+impl ColorData {
     /// Create a new color with the given RGBA values.
-    pub fn new(r: u8, g: u8, b: u8, a: f32, label: String) -> Self {
+    pub fn new(r: u8, g: u8, b: u8, a: f32) -> Self {
         Self {
-            id: 0,
             r,
             g,
             b,
             a: a.clamp(0.0, 1.0),
-            label,
         }
     }
 
-    /// Parse a color from a string. Supports hex, rgb, rgba, hsl, hsla formats.
+    /// Parse a color from a string. Supports hex, rgb, rgba, hsl, hsla, oklch formats.
     pub fn parse(input: &str) -> Result<Self, ColorParseError> {
         let input = input.trim();
 
@@ -100,31 +96,15 @@ impl Color {
     pub fn to_oklch(&self) -> String {
         let (l, c, h) = rgb_to_oklch(self.r, self.g, self.b);
         if (self.a - 1.0).abs() < f32::EPSILON {
-            format!(
-                "oklch({:.1}% {:.3} {:.0})",
-                l * 100.0,
-                c,
-                h
-            )
+            format!("oklch({:.1}% {:.3} {:.0})", l * 100.0, c, h)
         } else {
-            format!(
-                "oklch({:.1}% {:.3} {:.0} / {:.2})",
-                l * 100.0,
-                c,
-                h,
-                self.a
-            )
+            format!("oklch({:.1}% {:.3} {:.0} / {:.2})", l * 100.0, c, h, self.a)
         }
     }
 
     /// Convert to iced::Color for rendering.
     pub fn to_iced_color(&self) -> iced::Color {
         iced::Color::from_rgba8(self.r, self.g, self.b, self.a)
-    }
-
-    /// Generate a default label from the hex value.
-    pub fn default_label(&self) -> String {
-        self.to_hex()
     }
 }
 
@@ -160,26 +140,23 @@ static HSL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 // OKLCH format: oklch(L% C H) or oklch(L% C H / A)
-// L: 0-100% (lightness), C: 0-0.4+ (chroma), H: 0-360 (hue)
 static OKLCH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^oklch\s*\(\s*([\d.]+)%?\s+([\d.]+)\s+([\d.]+)\s*(?:/\s*([\d.]+))?\s*\)$")
         .expect("Invalid oklch regex")
 });
 
-fn parse_hex(input: &str) -> Option<Color> {
+fn parse_hex(input: &str) -> Option<ColorData> {
     let caps = HEX_REGEX.captures(input)?;
     let hex = caps.get(1)?.as_str();
 
     let (r, g, b, a) = match hex.len() {
         3 => {
-            // #RGB -> #RRGGBB
             let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).ok()?;
             let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).ok()?;
             let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).ok()?;
             (r, g, b, 1.0)
         }
         4 => {
-            // #RGBA -> #RRGGBBAA
             let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).ok()?;
             let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).ok()?;
             let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).ok()?;
@@ -187,14 +164,12 @@ fn parse_hex(input: &str) -> Option<Color> {
             (r, g, b, a as f32 / 255.0)
         }
         6 => {
-            // #RRGGBB
             let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
             let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
             let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
             (r, g, b, 1.0)
         }
         8 => {
-            // #RRGGBBAA
             let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
             let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
             let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
@@ -204,10 +179,10 @@ fn parse_hex(input: &str) -> Option<Color> {
         _ => return None,
     };
 
-    Some(Color::new(r, g, b, a, String::new()))
+    Some(ColorData::new(r, g, b, a))
 }
 
-fn parse_rgb(input: &str) -> Option<Color> {
+fn parse_rgb(input: &str) -> Option<ColorData> {
     let caps = RGB_REGEX.captures(input)?;
 
     let r: u8 = caps.get(1)?.as_str().parse().ok()?;
@@ -218,10 +193,10 @@ fn parse_rgb(input: &str) -> Option<Color> {
         .map(|m| m.as_str().parse().unwrap_or(1.0))
         .unwrap_or(1.0);
 
-    Some(Color::new(r, g, b, a, String::new()))
+    Some(ColorData::new(r, g, b, a))
 }
 
-fn parse_hsl(input: &str) -> Option<Color> {
+fn parse_hsl(input: &str) -> Option<ColorData> {
     let caps = HSL_REGEX.captures(input)?;
 
     let h: f32 = caps.get(1)?.as_str().parse().ok()?;
@@ -232,20 +207,18 @@ fn parse_hsl(input: &str) -> Option<Color> {
         .map(|m| m.as_str().parse().unwrap_or(1.0))
         .unwrap_or(1.0);
 
-    // Normalize s and l from percentage
     let s = s / 100.0;
     let l = l / 100.0;
 
-    // Validate ranges
     if h > 360.0 || s > 1.0 || l > 1.0 {
         return None;
     }
 
     let (r, g, b) = hsl_to_rgb(h, s, l);
-    Some(Color::new(r, g, b, a, String::new()))
+    Some(ColorData::new(r, g, b, a))
 }
 
-fn parse_oklch(input: &str) -> Option<Color> {
+fn parse_oklch(input: &str) -> Option<ColorData> {
     let caps = OKLCH_REGEX.captures(input)?;
 
     let l: f32 = caps.get(1)?.as_str().parse().ok()?;
@@ -256,16 +229,14 @@ fn parse_oklch(input: &str) -> Option<Color> {
         .map(|m| m.as_str().parse().unwrap_or(1.0))
         .unwrap_or(1.0);
 
-    // Normalize L from percentage (0-100) to 0-1
     let l = l / 100.0;
 
-    // Validate ranges
     if l > 1.0 || h > 360.0 {
         return None;
     }
 
     let (r, g, b) = oklch_to_rgb(l, c, h);
-    Some(Color::new(r, g, b, a, String::new()))
+    Some(ColorData::new(r, g, b, a))
 }
 
 /// Convert HSL to RGB.
@@ -371,27 +342,22 @@ fn linear_to_srgb(c: f32) -> f32 {
 /// Returns (L: 0-1, C: 0-0.4+, H: 0-360).
 #[allow(clippy::excessive_precision)]
 pub fn rgb_to_oklch(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
-    // Convert to linear RGB
     let r_lin = srgb_to_linear(r as f32 / 255.0);
     let g_lin = srgb_to_linear(g as f32 / 255.0);
     let b_lin = srgb_to_linear(b as f32 / 255.0);
 
-    // Linear RGB to LMS (using OKLab matrix)
     let l = 0.4122214708 * r_lin + 0.5363325363 * g_lin + 0.0514459929 * b_lin;
     let m = 0.2119034982 * r_lin + 0.6806995451 * g_lin + 0.1073969566 * b_lin;
     let s = 0.0883024619 * r_lin + 0.2817188376 * g_lin + 0.6299787005 * b_lin;
 
-    // Apply cube root
     let l_ = l.cbrt();
     let m_ = m.cbrt();
     let s_ = s.cbrt();
 
-    // LMS to OKLab
     let ok_l = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
     let ok_a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
     let ok_b = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
 
-    // OKLab to OKLCH
     let c = (ok_a * ok_a + ok_b * ok_b).sqrt();
     let h = if c < 1e-8 {
         0.0
@@ -412,27 +378,22 @@ pub fn rgb_to_oklch(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
 /// L: 0-1 (lightness), C: 0-0.4+ (chroma), H: 0-360 (hue).
 #[allow(clippy::excessive_precision)]
 pub fn oklch_to_rgb(l: f32, c: f32, h: f32) -> (u8, u8, u8) {
-    // OKLCH to OKLab
     let h_rad = h.to_radians();
     let ok_a = c * h_rad.cos();
     let ok_b = c * h_rad.sin();
 
-    // OKLab to LMS (inverse of the forward transform)
     let l_ = l + 0.3963377774 * ok_a + 0.2158037573 * ok_b;
     let m_ = l - 0.1055613458 * ok_a - 0.0638541728 * ok_b;
     let s_ = l - 0.0894841775 * ok_a - 1.2914855480 * ok_b;
 
-    // Cube the values
     let lms_l = l_ * l_ * l_;
     let lms_m = m_ * m_ * m_;
     let lms_s = s_ * s_ * s_;
 
-    // LMS to linear RGB
     let r_lin = 4.0767416621 * lms_l - 3.3077115913 * lms_m + 0.2309699292 * lms_s;
     let g_lin = -1.2684380046 * lms_l + 2.6097574011 * lms_m - 0.3413193965 * lms_s;
     let b_lin = -0.0041960863 * lms_l - 0.7034186147 * lms_m + 1.7076147010 * lms_s;
 
-    // Linear RGB to sRGB
     let r = linear_to_srgb(r_lin).clamp(0.0, 1.0);
     let g = linear_to_srgb(g_lin).clamp(0.0, 1.0);
     let b = linear_to_srgb(b_lin).clamp(0.0, 1.0);
@@ -445,13 +406,13 @@ pub fn oklch_to_rgb(l: f32, c: f32, h: f32) -> (u8, u8, u8) {
 }
 
 /// Extract all color values from a text string.
-pub fn extract_colors_from_text(text: &str) -> Vec<Color> {
+pub fn extract_colors_from_text(text: &str) -> Vec<ColorData> {
     let mut colors = Vec::new();
 
     // Try to find hex colors
     let hex_finder = Regex::new(r"#[0-9a-fA-F]{3,8}\b").expect("Invalid hex finder regex");
     for cap in hex_finder.find_iter(text) {
-        if let Ok(color) = Color::parse(cap.as_str()) {
+        if let Ok(color) = ColorData::parse(cap.as_str()) {
             colors.push(color);
         }
     }
@@ -459,7 +420,7 @@ pub fn extract_colors_from_text(text: &str) -> Vec<Color> {
     // Try to find rgb/rgba colors
     let rgb_finder = Regex::new(r"(?i)rgba?\s*\([^)]+\)").expect("Invalid rgb finder regex");
     for cap in rgb_finder.find_iter(text) {
-        if let Ok(color) = Color::parse(cap.as_str()) {
+        if let Ok(color) = ColorData::parse(cap.as_str()) {
             colors.push(color);
         }
     }
@@ -467,7 +428,7 @@ pub fn extract_colors_from_text(text: &str) -> Vec<Color> {
     // Try to find hsl/hsla colors
     let hsl_finder = Regex::new(r"(?i)hsla?\s*\([^)]+\)").expect("Invalid hsl finder regex");
     for cap in hsl_finder.find_iter(text) {
-        if let Ok(color) = Color::parse(cap.as_str()) {
+        if let Ok(color) = ColorData::parse(cap.as_str()) {
             colors.push(color);
         }
     }
@@ -475,7 +436,7 @@ pub fn extract_colors_from_text(text: &str) -> Vec<Color> {
     // Try to find oklch colors
     let oklch_finder = Regex::new(r"(?i)oklch\s*\([^)]+\)").expect("Invalid oklch finder regex");
     for cap in oklch_finder.find_iter(text) {
-        if let Ok(color) = Color::parse(cap.as_str()) {
+        if let Ok(color) = ColorData::parse(cap.as_str()) {
             colors.push(color);
         }
     }
@@ -489,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_parse_hex() {
-        let color = Color::parse("#FF5733").unwrap();
+        let color = ColorData::parse("#FF5733").unwrap();
         assert_eq!(color.r, 255);
         assert_eq!(color.g, 87);
         assert_eq!(color.b, 51);
@@ -498,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_parse_hex_short() {
-        let color = Color::parse("#F53").unwrap();
+        let color = ColorData::parse("#F53").unwrap();
         assert_eq!(color.r, 255);
         assert_eq!(color.g, 85);
         assert_eq!(color.b, 51);
@@ -506,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_parse_hex_with_alpha() {
-        let color = Color::parse("#FF573380").unwrap();
+        let color = ColorData::parse("#FF573380").unwrap();
         assert_eq!(color.r, 255);
         assert_eq!(color.g, 87);
         assert_eq!(color.b, 51);
@@ -515,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_parse_rgb() {
-        let color = Color::parse("rgb(255, 87, 51)").unwrap();
+        let color = ColorData::parse("rgb(255, 87, 51)").unwrap();
         assert_eq!(color.r, 255);
         assert_eq!(color.g, 87);
         assert_eq!(color.b, 51);
@@ -523,27 +484,26 @@ mod tests {
 
     #[test]
     fn test_parse_rgba() {
-        let color = Color::parse("rgba(255, 87, 51, 0.5)").unwrap();
+        let color = ColorData::parse("rgba(255, 87, 51, 0.5)").unwrap();
         assert_eq!(color.r, 255);
         assert!((color.a - 0.5).abs() < f32::EPSILON);
     }
 
     #[test]
     fn test_parse_hsl() {
-        let color = Color::parse("hsl(11, 100%, 60%)").unwrap();
-        // Should be approximately #FF5733
+        let color = ColorData::parse("hsl(11, 100%, 60%)").unwrap();
         assert!(color.r > 250);
     }
 
     #[test]
     fn test_to_hex() {
-        let color = Color::new(255, 87, 51, 1.0, String::new());
+        let color = ColorData::new(255, 87, 51, 1.0);
         assert_eq!(color.to_hex(), "#FF5733");
     }
 
     #[test]
     fn test_to_rgb() {
-        let color = Color::new(255, 87, 51, 1.0, String::new());
+        let color = ColorData::new(255, 87, 51, 1.0);
         assert_eq!(color.to_rgb(), "rgb(255, 87, 51)");
     }
 
@@ -556,26 +516,22 @@ mod tests {
 
     #[test]
     fn test_parse_oklch() {
-        // oklch(70% 0.15 30) should produce an orange-ish color
-        let color = Color::parse("oklch(70% 0.15 30)").unwrap();
-        // Just verify it parses and produces reasonable RGB values
+        let color = ColorData::parse("oklch(70% 0.15 30)").unwrap();
         assert!(color.r > 0);
         assert!((color.a - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn test_parse_oklch_with_alpha() {
-        let color = Color::parse("oklch(70% 0.15 30 / 0.5)").unwrap();
+        let color = ColorData::parse("oklch(70% 0.15 30 / 0.5)").unwrap();
         assert!((color.a - 0.5).abs() < f32::EPSILON);
     }
 
     #[test]
     fn test_rgb_to_oklch_roundtrip() {
-        // Test that RGB -> OKLCH -> RGB roundtrip is reasonably accurate
         let original = (128_u8, 64_u8, 192_u8);
         let (l, c, h) = rgb_to_oklch(original.0, original.1, original.2);
         let (r, g, b) = oklch_to_rgb(l, c, h);
-        // Allow some tolerance due to floating point and clamping
         assert!((r as i32 - original.0 as i32).abs() <= 2);
         assert!((g as i32 - original.1 as i32).abs() <= 2);
         assert!((b as i32 - original.2 as i32).abs() <= 2);
@@ -583,17 +539,17 @@ mod tests {
 
     #[test]
     fn test_to_oklch() {
-        let color = Color::new(255, 128, 64, 1.0, String::new());
+        let color = ColorData::new(255, 128, 64, 1.0);
         let oklch_str = color.to_oklch();
         assert!(oklch_str.starts_with("oklch("));
-        assert!(!oklch_str.contains("/")); // No alpha when a = 1.0
+        assert!(!oklch_str.contains("/"));
     }
 
     #[test]
     fn test_to_oklch_with_alpha() {
-        let color = Color::new(255, 128, 64, 0.5, String::new());
+        let color = ColorData::new(255, 128, 64, 0.5);
         let oklch_str = color.to_oklch();
-        assert!(oklch_str.contains("/")); // Has alpha
+        assert!(oklch_str.contains("/"));
     }
 
     #[test]

@@ -3,8 +3,8 @@
 use iced::widget::canvas::{self, Event};
 use iced::{mouse, Rectangle, Renderer, Theme};
 
-use crate::color::oklch_to_rgb;
 use crate::message::Message;
+use crate::snippet::oklch_to_rgb;
 
 /// A canvas program that draws a chroma/lightness picker area for OKLCH.
 /// X-axis: Chroma (0 to max_chroma)

@@ -3,8 +3,8 @@
 use iced::widget::canvas::{self, Event};
 use iced::{mouse, Rectangle, Renderer, Theme};
 
-use crate::color::hsl_to_rgb;
 use crate::message::Message;
+use crate::snippet::hsl_to_rgb;
 
 /// A canvas program that draws a hue spectrum bar.
 pub struct HueBar {

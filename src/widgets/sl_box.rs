@@ -3,8 +3,8 @@
 use iced::widget::canvas::{self, Event};
 use iced::{mouse, Rectangle, Renderer, Theme};
 
-use crate::color::hsl_to_rgb;
 use crate::message::Message;
+use crate::snippet::hsl_to_rgb;
 
 /// A canvas program that draws a saturation/lightness picker area.
 pub struct SaturationLightnessBox {
@@ -46,19 +46,15 @@ impl canvas::Program<Message> for SaturationLightnessBox {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
                 state.is_dragging = true;
                 let (s, l) = Self::position_to_sl(bounds, cursor_position);
-                Some(
-                    canvas::Action::publish(Message::PickerSLChanged(s, l))
-                        .and_capture(),
-                )
+                Some(canvas::Action::publish(Message::PickerSLChanged(s, l)).and_capture())
             }
             Event::Mouse(mouse::Event::CursorMoved { .. }) if state.is_dragging => {
                 let (s, l) = Self::position_to_sl(bounds, cursor_position);
-                Some(
-                    canvas::Action::publish(Message::PickerSLChanged(s, l))
-                        .and_capture(),
-                )
+                Some(canvas::Action::publish(Message::PickerSLChanged(s, l)).and_capture())
             }
-            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) if state.is_dragging => {
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+                if state.is_dragging =>
+            {
                 state.is_dragging = false;
                 Some(canvas::Action::capture())
             }

@@ -3,15 +3,17 @@
 use iced::widget::operation;
 use iced::Task;
 
-use crate::color::{extract_colors_from_text, Color};
 use crate::db;
 use crate::message::Message;
-use crate::view::{ColorPickerState, PickerMode, COLOR_INPUT_ID};
+use crate::snippet::{
+    detect_snippet_type, extract_colors_from_text, ColorData, Snippet, SnippetContent, SnippetKind,
+};
+use crate::view::{CodeEditorState, ColorPickerState, PickerMode, TextEditorState, COLOR_INPUT_ID};
 
 /// Application state.
 #[derive(Default)]
 pub struct Shard {
-    pub colors: Vec<Color>,
+    pub snippets: Vec<Snippet>,
     pub color_input: String,
     pub input_error: Option<String>,
     pub is_listening_clipboard: bool,
@@ -19,25 +21,28 @@ pub struct Shard {
     pub editing_label: Option<(i64, String)>,
     pub status_message: Option<String>,
     pub filter_text: String,
-    pub selected_color: Option<i64>,
+    pub filter_kind: Option<SnippetKind>,
+    pub selected_snippet: Option<i64>,
     pub color_picker: Option<ColorPickerState>,
+    pub code_editor: Option<CodeEditorState>,
+    pub text_editor: Option<TextEditorState>,
 }
 
 impl Shard {
     /// Create a new application instance.
     pub fn new() -> (Self, Task<Message>) {
-        let load_task = Task::perform(async { db::load_colors() }, Message::ColorsLoaded);
+        let load_task = Task::perform(async { db::load_snippets() }, Message::SnippetsLoaded);
         (Self::default(), load_task)
     }
 
     /// Handle application messages.
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::ColorsLoaded(result) => {
+            Message::SnippetsLoaded(result) => {
                 match result {
-                    Ok(colors) => {
-                        self.status_message = Some(format!("{} colors loaded", colors.len()));
-                        self.colors = colors;
+                    Ok(snippets) => {
+                        self.status_message = Some(format!("{} snippets loaded", snippets.len()));
+                        self.snippets = snippets;
                     }
                     Err(e) => {
                         self.status_message = Some(format!("Load error: {}", e));
@@ -49,11 +54,11 @@ impl Shard {
             Message::ColorInputChanged(input) => {
                 self.color_input = input.clone();
 
-                // Real-time validation
+                // Real-time validation for color input
                 if input.trim().is_empty() {
                     self.input_error = None;
                 } else {
-                    match Color::parse(&input) {
+                    match ColorData::parse(&input) {
                         Ok(_) => self.input_error = None,
                         Err(e) => self.input_error = Some(e.to_string()),
                     }
@@ -61,21 +66,20 @@ impl Shard {
                 Task::none()
             }
 
-            Message::AddColor => {
+            Message::AddColorFromInput => {
                 let input = self.color_input.clone();
                 if input.trim().is_empty() {
                     return Task::none();
                 }
 
-                match Color::parse(&input) {
-                    Ok(mut color) => {
-                        if color.label.is_empty() {
-                            color.label = color.default_label();
-                        }
-
+                match ColorData::parse(&input) {
+                    Ok(color) => {
+                        let label = color.to_hex();
                         Task::perform(
-                            async move { db::add_or_move_color(color) },
-                            Message::ColorAdded,
+                            async move {
+                                db::add_or_move_color(color.r, color.g, color.b, color.a, label)
+                            },
+                            Message::SnippetAdded,
                         )
                     }
                     Err(e) => {
@@ -85,16 +89,16 @@ impl Shard {
                 }
             }
 
-            Message::ColorAdded(result) => {
+            Message::SnippetAdded(result) => {
                 match result {
-                    Ok(color) => {
+                    Ok(snippet) => {
                         // Remove if already exists (for move-to-top case)
-                        self.colors.retain(|c| c.id != color.id);
+                        self.snippets.retain(|s| s.id != snippet.id);
                         // Add at the beginning
-                        self.colors.insert(0, color);
+                        self.snippets.insert(0, snippet);
                         self.color_input.clear();
                         self.input_error = None;
-                        self.status_message = Some("Color added".to_string());
+                        self.status_message = Some("Snippet added".to_string());
                     }
                     Err(e) => {
                         self.status_message = Some(format!("Error: {}", e));
@@ -103,11 +107,22 @@ impl Shard {
                 Task::none()
             }
 
+            Message::CopySnippet(id) => {
+                if let Some(snippet) = self.snippets.iter().find(|s| s.id == id) {
+                    let text = snippet.content.to_copyable_string();
+                    Task::perform(
+                        async move { copy_to_clipboard(&text).await },
+                        Message::CopyFinished,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+
             Message::CopyHex(id) => self.copy_color_format(id, |c| c.to_hex()),
-
             Message::CopyRgb(id) => self.copy_color_format(id, |c| c.to_rgb()),
-
             Message::CopyHsl(id) => self.copy_color_format(id, |c| c.to_hsl()),
+            Message::CopyOklch(id) => self.copy_color_format(id, |c| c.to_oklch()),
 
             Message::CopyFinished(result) => {
                 match result {
@@ -117,15 +132,16 @@ impl Shard {
                 Task::none()
             }
 
-            Message::DeleteColor(id) => {
-                Task::perform(async move { db::delete_color(id) }, Message::ColorDeleted)
-            }
+            Message::DeleteSnippet(id) => Task::perform(
+                async move { db::delete_snippet(id) },
+                Message::SnippetDeleted,
+            ),
 
-            Message::ColorDeleted(result) => {
+            Message::SnippetDeleted(result) => {
                 match result {
                     Ok(id) => {
-                        self.colors.retain(|c| c.id != id);
-                        self.status_message = Some("Color deleted".to_string());
+                        self.snippets.retain(|s| s.id != id);
+                        self.status_message = Some("Snippet deleted".to_string());
                     }
                     Err(e) => {
                         self.status_message = Some(format!("Delete failed: {}", e));
@@ -134,9 +150,14 @@ impl Shard {
                 Task::none()
             }
 
+            Message::SelectSnippet(id) => {
+                self.selected_snippet = id;
+                Task::none()
+            }
+
             Message::StartEditLabel(id) => {
-                if let Some(color) = self.colors.iter().find(|c| c.id == id) {
-                    self.editing_label = Some((id, color.label.clone()));
+                if let Some(snippet) = self.snippets.iter().find(|s| s.id == id) {
+                    self.editing_label = Some((id, snippet.label.clone()));
                 }
                 Task::none()
             }
@@ -167,8 +188,8 @@ impl Shard {
             Message::LabelSaved(result) => {
                 match result {
                     Ok((id, label)) => {
-                        if let Some(color) = self.colors.iter_mut().find(|c| c.id == id) {
-                            color.label = label;
+                        if let Some(snippet) = self.snippets.iter_mut().find(|s| s.id == id) {
+                            snippet.label = label;
                         }
                         self.status_message = Some("Label saved".to_string());
                     }
@@ -204,19 +225,40 @@ impl Shard {
                     if !text.is_empty() && Some(&text) != self.last_clipboard_content.as_ref() {
                         self.last_clipboard_content = Some(text.clone());
 
-                        // Extract colors from clipboard content
-                        let colors = extract_colors_from_text(&text);
-                        if !colors.is_empty() {
-                            // Add the first detected color
-                            let mut color = colors.into_iter().next().expect("checked not empty");
-                            if color.label.is_empty() {
-                                color.label = color.default_label();
+                        // Detect snippet type and add accordingly
+                        if let Some(kind) = detect_snippet_type(&text) {
+                            match kind {
+                                SnippetKind::Color => {
+                                    let colors = extract_colors_from_text(&text);
+                                    if let Some(color) = colors.into_iter().next() {
+                                        let label = color.to_hex();
+                                        return Task::perform(
+                                            async move {
+                                                db::add_or_move_color(
+                                                    color.r, color.g, color.b, color.a, label,
+                                                )
+                                            },
+                                            Message::SnippetAdded,
+                                        );
+                                    }
+                                }
+                                SnippetKind::Code => {
+                                    let code = text.clone();
+                                    return Task::perform(
+                                        async move {
+                                            db::add_code_snippet(code, String::new(), String::new())
+                                        },
+                                        Message::SnippetAdded,
+                                    );
+                                }
+                                SnippetKind::Text => {
+                                    let text_content = text.clone();
+                                    return Task::perform(
+                                        async move { db::add_text_snippet(text_content, String::new()) },
+                                        Message::SnippetAdded,
+                                    );
+                                }
                             }
-
-                            return Task::perform(
-                                async move { db::add_or_move_color(color) },
-                                Message::ColorAdded,
-                            );
                         }
                     }
                 }
@@ -228,66 +270,69 @@ impl Shard {
                 Task::none()
             }
 
-            Message::PasteFromClipboard => {
-                // Read clipboard and try to add as color
-                Task::perform(
-                    async {
-                        match arboard::Clipboard::new() {
-                            Ok(mut clipboard) => clipboard.get_text().ok(),
-                            Err(_) => None,
-                        }
-                    },
-                    |content| {
-                        if let Some(text) = content {
-                            Message::ColorInputChanged(text)
-                        } else {
-                            Message::ColorInputChanged(String::new())
-                        }
-                    },
-                )
+            Message::FilterKindChanged(kind) => {
+                self.filter_kind = kind;
+                Task::none()
             }
+
+            Message::PasteFromClipboard => Task::perform(
+                async {
+                    match arboard::Clipboard::new() {
+                        Ok(mut clipboard) => clipboard.get_text().ok(),
+                        Err(_) => None,
+                    }
+                },
+                |content| {
+                    if let Some(text) = content {
+                        Message::ColorInputChanged(text)
+                    } else {
+                        Message::ColorInputChanged(String::new())
+                    }
+                },
+            ),
 
             Message::FocusColorInput => operation::focus(COLOR_INPUT_ID),
 
             Message::EscapePressed => {
-                // Priority: close color picker > cancel label editing > clear filter > deselect
+                // Priority: close modals > cancel label editing > clear filter > deselect
                 if self.color_picker.is_some() {
                     self.color_picker = None;
+                } else if self.code_editor.is_some() {
+                    self.code_editor = None;
+                } else if self.text_editor.is_some() {
+                    self.text_editor = None;
                 } else if self.editing_label.is_some() {
                     self.editing_label = None;
                 } else if !self.filter_text.is_empty() {
                     self.filter_text.clear();
                 } else {
-                    self.selected_color = None;
+                    self.selected_snippet = None;
                 }
                 Task::none()
             }
 
-            Message::DeleteSelectedColor => {
-                if let Some(id) = self.selected_color {
-                    self.selected_color = None;
-                    Task::perform(async move { db::delete_color(id) }, Message::ColorDeleted)
+            Message::DeleteSelectedSnippet => {
+                if let Some(id) = self.selected_snippet {
+                    self.selected_snippet = None;
+                    Task::perform(
+                        async move { db::delete_snippet(id) },
+                        Message::SnippetDeleted,
+                    )
                 } else {
                     Task::none()
                 }
             }
 
-            Message::SelectColor(id) => {
-                self.selected_color = id;
-                Task::none()
-            }
-
-            // Color picker messages
+            // === Color Picker Messages ===
             Message::OpenColorPicker(id) => {
-                self.color_picker = Some(if let Some(color_id) = id {
+                self.color_picker = Some(if let Some(snippet_id) = id {
                     // Edit existing color
-                    if let Some(color) = self.colors.iter().find(|c| c.id == color_id) {
-                        ColorPickerState::edit_color(color)
+                    if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
+                        ColorPickerState::from_snippet(snippet)
                     } else {
                         ColorPickerState::new_color()
                     }
                 } else {
-                    // New color
                     ColorPickerState::new_color()
                 });
                 Task::none()
@@ -343,16 +388,9 @@ impl Shard {
 
             Message::PickerModeChanged(mode) => {
                 if let Some(picker) = &mut self.color_picker {
-                    // Sync values when switching modes
                     match mode {
-                        PickerMode::Hsl => {
-                            // Switching to HSL: sync HSL from current RGB
-                            picker.sync_hsl_from_rgb();
-                        }
-                        PickerMode::Oklch => {
-                            // Switching to OKLCH: sync OKLCH from current RGB
-                            picker.sync_oklch_from_rgb();
-                        }
+                        PickerMode::Hsl => picker.sync_hsl_from_rgb(),
+                        PickerMode::Oklch => picker.sync_oklch_from_rgb(),
                     }
                     picker.mode = mode;
                 }
@@ -390,21 +428,25 @@ impl Shard {
 
             Message::ConfirmColorPicker => {
                 if let Some(picker) = self.color_picker.take() {
-                    let color = picker.to_color();
+                    let (r, g, b) = picker.to_rgb();
+                    let alpha = picker.alpha;
+                    let label = if picker.label.is_empty() {
+                        ColorData::new(r, g, b, alpha).to_hex()
+                    } else {
+                        picker.label.clone()
+                    };
+
                     if let Some(editing_id) = picker.editing_id {
                         // Update existing color
-                        let (r, g, b) = picker.to_rgb();
-                        let label = color.label.clone();
-                        let alpha = picker.alpha;
                         Task::perform(
                             async move { db::update_color(editing_id, r, g, b, alpha, label) },
-                            Message::ColorUpdated,
+                            Message::SnippetUpdated,
                         )
                     } else {
                         // Add new color
                         Task::perform(
-                            async move { db::add_or_move_color(color) },
-                            Message::ColorAdded,
+                            async move { db::add_or_move_color(r, g, b, alpha, label) },
+                            Message::SnippetAdded,
                         )
                     }
                 } else {
@@ -412,14 +454,15 @@ impl Shard {
                 }
             }
 
-            Message::ColorUpdated(result) => {
+            Message::SnippetUpdated(result) => {
                 match result {
-                    Ok(color) => {
-                        // Update the color in the list
-                        if let Some(existing) = self.colors.iter_mut().find(|c| c.id == color.id) {
-                            *existing = color;
+                    Ok(snippet) => {
+                        if let Some(existing) =
+                            self.snippets.iter_mut().find(|s| s.id == snippet.id)
+                        {
+                            *existing = snippet;
                         }
-                        self.status_message = Some("Color updated".to_string());
+                        self.status_message = Some("Snippet updated".to_string());
                     }
                     Err(e) => {
                         self.status_message = Some(format!("Update failed: {}", e));
@@ -427,30 +470,151 @@ impl Shard {
                 }
                 Task::none()
             }
+
+            // === Code Editor Messages ===
+            Message::OpenCodeEditor(id) => {
+                self.code_editor = Some(if let Some(snippet_id) = id {
+                    if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
+                        CodeEditorState::from_snippet(snippet)
+                    } else {
+                        CodeEditorState::new_code()
+                    }
+                } else {
+                    CodeEditorState::new_code()
+                });
+                Task::none()
+            }
+
+            Message::CloseCodeEditor => {
+                self.code_editor = None;
+                Task::none()
+            }
+
+            Message::CodeEditorContentChanged(action) => {
+                if let Some(editor) = &mut self.code_editor {
+                    editor.content.perform(action);
+                }
+                Task::none()
+            }
+
+            Message::CodeEditorLanguageChanged(language) => {
+                if let Some(editor) = &mut self.code_editor {
+                    editor.language = language;
+                }
+                Task::none()
+            }
+
+            Message::CodeEditorLabelChanged(label) => {
+                if let Some(editor) = &mut self.code_editor {
+                    editor.label = label;
+                }
+                Task::none()
+            }
+
+            Message::ConfirmCodeEditor => {
+                if let Some(editor) = self.code_editor.take() {
+                    let code = editor.content.text();
+                    let language = editor.language.clone();
+                    let label = editor.label.clone();
+
+                    if let Some(editing_id) = editor.editing_id {
+                        Task::perform(
+                            async move { db::update_code(editing_id, code, language, label) },
+                            Message::SnippetUpdated,
+                        )
+                    } else {
+                        Task::perform(
+                            async move { db::add_code_snippet(code, language, label) },
+                            Message::SnippetAdded,
+                        )
+                    }
+                } else {
+                    Task::none()
+                }
+            }
+
+            // === Text Editor Messages ===
+            Message::OpenTextEditor(id) => {
+                self.text_editor = Some(if let Some(snippet_id) = id {
+                    if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
+                        TextEditorState::from_snippet(snippet)
+                    } else {
+                        TextEditorState::new_text()
+                    }
+                } else {
+                    TextEditorState::new_text()
+                });
+                Task::none()
+            }
+
+            Message::CloseTextEditor => {
+                self.text_editor = None;
+                Task::none()
+            }
+
+            Message::TextEditorContentChanged(action) => {
+                if let Some(editor) = &mut self.text_editor {
+                    editor.content.perform(action);
+                }
+                Task::none()
+            }
+
+            Message::TextEditorLabelChanged(label) => {
+                if let Some(editor) = &mut self.text_editor {
+                    editor.label = label;
+                }
+                Task::none()
+            }
+
+            Message::ConfirmTextEditor => {
+                if let Some(editor) = self.text_editor.take() {
+                    let text = editor.content.text();
+                    let label = editor.label.clone();
+
+                    if let Some(editing_id) = editor.editing_id {
+                        Task::perform(
+                            async move { db::update_text(editing_id, text, label) },
+                            Message::SnippetUpdated,
+                        )
+                    } else {
+                        Task::perform(
+                            async move { db::add_text_snippet(text, label) },
+                            Message::SnippetAdded,
+                        )
+                    }
+                } else {
+                    Task::none()
+                }
+            }
         }
     }
 
     /// Helper to copy a color format to clipboard.
     fn copy_color_format<F>(&self, id: i64, format_fn: F) -> Task<Message>
     where
-        F: FnOnce(&Color) -> String + Send + 'static,
+        F: FnOnce(&ColorData) -> String + Send + 'static,
     {
-        if let Some(color) = self.colors.iter().find(|c| c.id == id) {
-            let text = format_fn(color);
-            Task::perform(
-                async move {
-                    match arboard::Clipboard::new() {
-                        Ok(mut clipboard) => {
-                            clipboard.set_text(&text).map_err(|e| e.to_string())?;
-                            Ok(format!("Copied: {}", text))
-                        }
-                        Err(e) => Err(e.to_string()),
-                    }
-                },
-                Message::CopyFinished,
-            )
-        } else {
-            Task::none()
+        if let Some(snippet) = self.snippets.iter().find(|s| s.id == id) {
+            if let SnippetContent::Color(color) = &snippet.content {
+                let text = format_fn(color);
+                return Task::perform(
+                    async move { copy_to_clipboard(&text).await },
+                    Message::CopyFinished,
+                );
+            }
         }
+        Task::none()
+    }
+}
+
+/// Copy text to clipboard.
+async fn copy_to_clipboard(text: &str) -> Result<String, String> {
+    let text = text.to_string();
+    match arboard::Clipboard::new() {
+        Ok(mut clipboard) => {
+            clipboard.set_text(&text).map_err(|e| e.to_string())?;
+            Ok(format!("Copied: {}", text))
+        }
+        Err(e) => Err(e.to_string()),
     }
 }
