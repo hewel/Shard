@@ -110,6 +110,11 @@ pub fn arrow_square_out() -> text::Text<'static> {
     icon('\u{e5de}')
 }
 
+/// Gear icon (for settings)
+pub fn gear() -> text::Text<'static> {
+    icon('\u{e27a}')
+}
+
 // === Icon constants for use in text widgets ===
 
 /// Code icon codepoint

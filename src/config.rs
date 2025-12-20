@@ -191,6 +191,6 @@ mod tests {
         let config = Config::default();
         let toml_str = toml::to_string_pretty(&config).unwrap();
         let parsed: Config = toml::from_str(&toml_str).unwrap();
-        assert_eq!(parsed.editor.preset, EditorPreset::Vscode);
+        assert_eq!(parsed.editor.preset, EditorPreset::Helix);
     }
 }

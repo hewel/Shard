@@ -9,7 +9,9 @@ use crate::message::Message;
 use crate::snippet::{
     detect_snippet_type, extract_colors_from_text, ColorData, Snippet, SnippetContent, SnippetKind,
 };
-use crate::view::{CodeEditorState, ColorPickerState, PickerMode, TextEditorState, COLOR_INPUT_ID};
+use crate::view::{
+    CodeEditorState, ColorPickerState, PickerMode, SettingsState, TextEditorState, COLOR_INPUT_ID,
+};
 
 /// Application state.
 pub struct Shard {
@@ -25,6 +27,7 @@ pub struct Shard {
     pub color_picker: Option<ColorPickerState>,
     pub code_editor: Option<CodeEditorState>,
     pub text_editor: Option<TextEditorState>,
+    pub settings: Option<SettingsState>,
     pub config: Config,
 }
 
@@ -43,6 +46,7 @@ impl Default for Shard {
             color_picker: None,
             code_editor: None,
             text_editor: None,
+            settings: None,
             config: Config::load(),
         }
     }
@@ -336,7 +340,9 @@ impl Shard {
 
             Message::EscapePressed => {
                 // Priority: close modals > clear filter > deselect
-                if self.color_picker.is_some() {
+                if self.settings.is_some() {
+                    self.settings = None;
+                } else if self.color_picker.is_some() {
                     self.color_picker = None;
                 } else if self.code_editor.is_some() {
                     self.code_editor = None;
@@ -624,6 +630,53 @@ impl Shard {
                 } else {
                     Task::none()
                 }
+            }
+
+            // === Settings Messages ===
+            Message::OpenSettings => {
+                self.settings = Some(SettingsState::from_config(&self.config));
+                Task::none()
+            }
+
+            Message::CloseSettings => {
+                self.settings = None;
+                Task::none()
+            }
+
+            Message::SettingsEditorPresetChanged(preset) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.editor_preset = preset;
+                }
+                Task::none()
+            }
+
+            Message::SettingsCustomCommandChanged(cmd) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.custom_command = cmd;
+                }
+                Task::none()
+            }
+
+            Message::ConfirmSettings => {
+                if let Some(settings) = self.settings.take() {
+                    settings.apply_to_config(&mut self.config);
+                    let config = self.config.clone();
+                    Task::perform(async move { config.save() }, Message::ConfigSaved)
+                } else {
+                    Task::none()
+                }
+            }
+
+            Message::ConfigSaved(result) => {
+                match result {
+                    Ok(()) => {
+                        self.status_message = Some("Settings saved".to_string());
+                    }
+                    Err(e) => {
+                        self.status_message = Some(format!("Failed to save settings: {}", e));
+                    }
+                }
+                Task::none()
             }
         }
     }

@@ -4,6 +4,7 @@ pub mod code_card;
 pub mod code_editor;
 pub mod color_card;
 pub mod color_picker;
+pub mod settings;
 pub mod text_card;
 pub mod text_editor;
 
@@ -11,6 +12,7 @@ pub use code_card::view_code_card;
 pub use code_editor::CodeEditorState;
 pub use color_card::view_color_card;
 pub use color_picker::{view_color_picker_modal, ColorPickerState, PickerMode};
+pub use settings::SettingsState;
 pub use text_card::view_text_card;
 pub use text_editor::TextEditorState;
 
@@ -24,7 +26,7 @@ use crate::message::Message;
 use crate::snippet::{Snippet, SnippetContent, SnippetKind};
 use crate::theme::{
     header_style, input_style, primary_button_style, secondary_button_style, status_bar_style,
-    BG_BASE, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_SECONDARY,
+    subtle_button_style, BG_BASE, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_SECONDARY,
 };
 
 /// Input field ID for keyboard focus.
@@ -43,6 +45,7 @@ pub struct ViewContext<'a> {
     pub color_picker: Option<&'a ColorPickerState>,
     pub code_editor: Option<&'a CodeEditorState>,
     pub text_editor: Option<&'a TextEditorState>,
+    pub settings: Option<&'a SettingsState>,
 }
 
 /// Render the main application view.
@@ -59,6 +62,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         color_picker,
         code_editor,
         text_editor,
+        settings,
     } = ctx;
 
     let has_error = input_error.is_some();
@@ -115,6 +119,12 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .size(14)
         .style(|theme, status| input_style(theme, status, false));
 
+    // Settings button
+    let settings_button = button(icons::gear().size(16))
+        .on_press(Message::OpenSettings)
+        .padding(SPACE_SM)
+        .style(subtle_button_style);
+
     let input_row = row![
         color_input_widget,
         add_color_button,
@@ -122,6 +132,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         add_text_button,
         clipboard_toggle,
         filter_input,
+        settings_button,
     ]
     .spacing(SPACE_SM)
     .padding(SPACE_MD)
@@ -252,7 +263,9 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
 
     // Stack modals on top
-    if let Some(picker) = color_picker {
+    if let Some(s) = settings {
+        stack![main_content, settings::view_settings_modal(s)].into()
+    } else if let Some(picker) = color_picker {
         stack![main_content, view_color_picker_modal(picker)].into()
     } else if let Some(editor) = code_editor {
         stack![main_content, code_editor::view_code_editor_modal(editor)].into()

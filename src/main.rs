@@ -44,6 +44,7 @@ impl Shard {
             color_picker: self.color_picker.as_ref(),
             code_editor: self.code_editor.as_ref(),
             text_editor: self.text_editor.as_ref(),
+            settings: self.settings.as_ref(),
         })
     }
 

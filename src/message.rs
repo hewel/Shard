@@ -1,5 +1,6 @@
 //! Application messages for the Shard snippet manager.
 
+use crate::config::EditorPreset;
 use crate::snippet::{Snippet, SnippetKind};
 use crate::view::PickerMode;
 
@@ -78,4 +79,12 @@ pub enum Message {
     TextEditorContentChanged(iced::widget::text_editor::Action),
     TextEditorLabelChanged(String),
     ConfirmTextEditor,
+
+    // === Settings ===
+    OpenSettings,
+    CloseSettings,
+    SettingsEditorPresetChanged(EditorPreset),
+    SettingsCustomCommandChanged(String),
+    ConfirmSettings,
+    ConfigSaved(Result<(), String>),
 }
