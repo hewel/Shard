@@ -1,112 +1,155 @@
 # Shard Project Plan & Todo
 
-## Current Version: Color Palette Manager
+## Current Version: Multi-Snippet Manager
 
-The app has been refactored from a text editor into a color palette manager.
+The app manages three types of snippets: Colors, Code, and Text.
 
 ## Completed Features
 
 ### Core Infrastructure
 - [x] **Application Structure**
-    - [x] Define `Shard` struct with color palette state
+    - [x] Define `Shard` struct with snippet state
     - [x] Implement `iced::application` entry point
     - [x] Create `Message` enum for all user interactions
+    - [x] Unified snippet model (`Snippet`, `SnippetKind`, `SnippetContent`)
 
-### Color Parsing (`src/color.rs`)
-- [x] **Multi-format Support**
-    - [x] Parse hex colors: `#RGB`, `#RRGGBB`, `#RRGGBBAA`
+### Snippet Types (`src/snippet/`)
+- [x] **Color Snippets** (`color.rs`)
+    - [x] Parse hex: `#RGB`, `#RRGGBB`, `#RRGGBBAA`
     - [x] Parse RGB/RGBA: `rgb(r, g, b)`, `rgba(r, g, b, a)`
     - [x] Parse HSL/HSLA: `hsl(h, s%, l%)`, `hsla(h, s%, l%, a)`
-- [x] **Format Conversion**
-    - [x] Convert to hex string
-    - [x] Convert to rgb/rgba string
-    - [x] Convert to hsl/hsla string
-- [x] **Color Extraction**
-    - [x] Extract all colors from arbitrary text (for clipboard detection)
+    - [x] Parse OKLCH: `oklch(l% c h)`, `oklch(l% c h / a)`
+    - [x] Convert between formats (hex, rgb, hsl, oklch)
+    - [x] Extract colors from arbitrary text
+- [x] **Code Snippets** (`code.rs`)
+    - [x] Language detection (Rust, Python, JS, TS, JSON, HTML, CSS, SQL, Shell, Go)
+    - [x] Code heuristics (`looks_like_code()`)
+    - [x] Line count and preview
+- [x] **Text Snippets** (`text.rs`)
+    - [x] Plain text storage
+    - [x] Character/line count
+    - [x] Preview generation
 
 ### Database Persistence (`src/db.rs`)
 - [x] **SQLite Storage**
-    - [x] Store colors with RGBA values, label, and position
+    - [x] Unified `snippets` table with kind-specific columns
     - [x] Auto-create database in user data directory
-    - [x] Load colors on startup
+    - [x] Migration system with schema versioning
+    - [x] Auto-migrate from old `colors` table
 - [x] **CRUD Operations**
-    - [x] Insert new colors
-    - [x] Update color labels
-    - [x] Delete colors
-    - [x] Move color to top (for duplicate handling)
+    - [x] Load all snippets on startup
+    - [x] Insert new snippets (color, code, text)
+    - [x] Update snippets
+    - [x] Delete snippets
+    - [x] Move duplicate colors to top
 
-### User Interface (`src/main.rs`)
-- [x] **Color Input**
-    - [x] Text input field for entering color values
-    - [x] Real-time validation with error feedback (red border)
-    - [x] Add button to save colors
-- [x] **Color Palette Display**
-    - [x] Scrollable list of color cards
-    - [x] Visual color swatch with checkerboard for transparency
-    - [x] Display hex value
-    - [x] Editable labels (click to edit)
-- [x] **Copy Actions**
-    - [x] Copy as Hex
-    - [x] Copy as RGB
-    - [x] Copy as HSL
-- [x] **Clipboard Listening**
-    - [x] Toggle to enable/disable
-    - [x] Auto-detect colors from clipboard content
-    - [x] Auto-add detected colors to palette
+### User Interface
+
+#### Main View (`src/view/mod.rs`)
+- [x] **Header**
+    - [x] Color input field with validation
+    - [x] Add buttons: Color, Code, Text
+    - [x] Clipboard listening toggle
+    - [x] Filter input
+- [x] **Tab Filter**
+    - [x] All / Colors / Code / Text tabs
+    - [x] Filter by snippet kind
+    - [x] Combined with text search
+- [x] **Snippet List**
+    - [x] Scrollable list of snippet cards
+    - [x] Click-to-select with visual highlight
 - [x] **Status Bar**
-    - [x] Show color count
-    - [x] Show last action/status message
-- [x] **Search/Filter**
-    - [x] Filter input field in header row
-    - [x] Filter colors by label or hex value
-    - [x] Clear filter button (×)
-    - [x] Status bar shows filtered count (X / Y colors)
-- [x] **Keyboard Shortcuts**
-    - [x] Ctrl+V to paste/add color from clipboard
-    - [x] Ctrl+N to focus color input
-    - [x] Escape to cancel editing / clear filter / deselect
-    - [x] Delete to remove selected color
-    - [x] Click-to-select colors with visual highlight
+    - [x] Snippet count (filtered/total)
+    - [x] Last action message
 
-### Behavior
-- [x] **Duplicate Handling**
-    - [x] Detect duplicate colors by RGBA values
-    - [x] Move existing color to top instead of creating duplicate
-- [x] **Transparency Support**
-    - [x] Full RGBA/HSLA alpha channel support
-    - [x] Checkerboard background in swatches to visualize transparency
+#### Color Features
+- [x] **Color Card** (`color_card.rs`)
+    - [x] 72x72 color swatch with transparency support
+    - [x] Hex display
+    - [x] Copy buttons: Hex, RGB, HSL, OKLCH
+    - [x] Edit and delete buttons
+- [x] **Color Picker Modal** (`color_picker.rs`)
+    - [x] HSL mode with hue bar and SL box
+    - [x] OKLCH mode with hue bar and CL box
+    - [x] Alpha slider
+    - [x] Label input
+    - [x] Create new or edit existing colors
+
+#### Code Features
+- [x] **Code Card** (`code_card.rs`)
+    - [x] Code icon
+    - [x] Language badge
+    - [x] 2-line preview
+    - [x] Line count
+    - [x] Copy, edit, delete buttons
+- [x] **Code Editor Modal** (`code_editor.rs`)
+    - [x] Multi-line text editor
+    - [x] Language input
+    - [x] Label input
+    - [x] Create new or edit existing code
+
+#### Text Features
+- [x] **Text Card** (`text_card.rs`)
+    - [x] Text icon
+    - [x] 2-line preview
+    - [x] Character/line count
+    - [x] Copy, edit, delete buttons
+- [x] **Text Editor Modal** (`text_editor.rs`)
+    - [x] Multi-line text editor
+    - [x] Label input
+    - [x] Create new or edit existing text
+
+### Clipboard Integration
+- [x] **Smart Detection**
+    - [x] Toggle to enable/disable listening
+    - [x] Auto-detect snippet type from clipboard
+    - [x] Auto-add colors, code, or text snippets
+- [x] **Copy Actions**
+    - [x] Copy any snippet content
+    - [x] Copy colors in multiple formats
+
+### Keyboard Shortcuts
+- [x] Ctrl+V to paste/add from clipboard
+- [x] Ctrl+N to focus color input
+- [x] Escape to close modals / clear filter / deselect
+- [x] Delete to remove selected snippet
+
+### Custom Widgets (`src/widgets/`)
+- [x] **ColorSwatch** - Renders color with checkerboard for transparency
+- [x] **HueBar** - Interactive hue spectrum slider
+- [x] **SaturationLightnessBox** - 2D HSL picker
+- [x] **ChromaLightnessBox** - 2D OKLCH picker
+- [x] **AlphaBar** - Transparency slider
 
 ## Future Improvements
 
-### UI Enhancements (Planned Phases)
-- [x] **Phase 3: Color Picker Modal** (~3-4 hours)
-    - [x] Full HSL/RGB color picker with sliders
-    - [x] Add new colors via picker
-    - [x] Edit existing colors
-- [ ] **Phase 4: Palettes/Categories** (~4-5 hours)
+### UI Enhancements
+- [ ] **Palettes/Categories**
     - [ ] Create/rename/delete palettes
-    - [ ] Colors can belong to multiple palettes
+    - [ ] Snippets can belong to multiple palettes
     - [ ] Filter by palette
-    - [ ] Show palette badges on colors
-- [ ] **Phase 5: Drag-and-Drop Reordering** (~4-5 hours)
-    - [ ] Drag colors to reorder
+- [ ] **Drag-and-Drop Reordering**
+    - [ ] Drag snippets to reorder
     - [ ] Visual feedback during drag
     - [ ] Persist order to database
+- [ ] **Syntax Highlighting**
+    - [ ] Highlight code in editor and preview
+    - [ ] Language-specific colors
 
 ### Export/Import
-- [ ] Export palette as JSON
-- [ ] Export palette as CSS variables
-- [ ] Export palette as SCSS/SASS variables
-- [ ] Import colors from file
-- [ ] Import from image (color extraction)
+- [ ] Export snippets as JSON
+- [ ] Export colors as CSS/SCSS variables
+- [ ] Import snippets from file
+- [ ] Import colors from image
 
 ### Advanced Features
 - [ ] Color harmony suggestions (complementary, triadic, etc.)
 - [ ] Color contrast checker (WCAG accessibility)
-- [ ] Color naming (auto-suggest names like "Ocean Blue")
-- [ ] Undo/redo for color operations
+- [ ] Undo/redo for operations
 - [ ] Dark/light theme toggle
+- [ ] Snippet tags/labels
 
 ### Performance
-- [ ] Cache color swatches to avoid redrawing
-- [ ] Lazy loading for large palettes
+- [ ] Cache color swatches
+- [ ] Lazy loading for large lists
+- [ ] Virtualized scrolling
