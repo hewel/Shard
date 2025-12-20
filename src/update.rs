@@ -319,6 +319,14 @@ impl Shard {
                 Task::none()
             }
 
+            Message::PickerSLChanged(saturation, lightness) => {
+                if let Some(picker) = &mut self.color_picker {
+                    picker.saturation = saturation;
+                    picker.lightness = lightness;
+                }
+                Task::none()
+            }
+
             Message::PickerAlphaChanged(alpha) => {
                 if let Some(picker) = &mut self.color_picker {
                     picker.alpha = alpha;

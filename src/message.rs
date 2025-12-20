@@ -49,6 +49,7 @@ pub enum Message {
     PickerHueChanged(f32),
     PickerSaturationChanged(f32),
     PickerLightnessChanged(f32),
+    PickerSLChanged(f32, f32), // Combined saturation + lightness from SL box drag
     PickerAlphaChanged(f32),
     PickerLabelChanged(String),
     ConfirmColorPicker,
