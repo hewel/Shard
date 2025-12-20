@@ -4,6 +4,7 @@ use iced::widget::{button, column, container, row, text, text_input, Canvas};
 use iced::{Element, Length};
 
 use crate::color::Color;
+use crate::icons;
 use crate::message::Message;
 use crate::theme::{
     card_style, danger_button_style, input_style, primary_button_style, secondary_button_style,
@@ -74,14 +75,14 @@ pub fn view_color_card<'a>(
     ]
     .spacing(SPACE_XS);
 
-    // Icon-style edit button (Unicode ✎)
-    let edit_button = button(text("✎").size(14))
+    // Icon-style edit button (pencil)
+    let edit_button = button(icons::pencil().size(14))
         .on_press(Message::OpenColorPicker(Some(color.id)))
         .padding([SPACE_XS, SPACE_SM])
         .style(subtle_button_style);
 
-    // Icon-style delete button (Unicode ×)
-    let delete_button = button(text("×").size(16))
+    // Icon-style delete button (trash)
+    let delete_button = button(icons::trash().size(14))
         .on_press(Message::DeleteColor(color.id))
         .padding([SPACE_XS, SPACE_SM])
         .style(danger_button_style);

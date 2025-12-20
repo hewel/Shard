@@ -6,6 +6,7 @@ use iced::widget::{
 use iced::{Element, Length};
 
 use crate::color::{hsl_to_rgb, rgb_to_hsl, Color};
+use crate::icons;
 use crate::message::Message;
 use crate::theme::{
     input_style, modal_dialog_style, modal_overlay_style, primary_button_style,
@@ -91,7 +92,7 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
     let header_row = row![
         text(title).size(20).color(TEXT_PRIMARY),
         iced::widget::Space::new().width(Length::Fill),
-        button(text("×").size(18))
+        button(icons::x().size(16))
             .on_press(Message::CloseColorPicker)
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),

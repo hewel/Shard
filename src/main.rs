@@ -4,6 +4,7 @@
 
 mod color;
 mod db;
+mod icons;
 mod message;
 mod theme;
 mod update;
@@ -19,6 +20,7 @@ pub use update::Shard;
 pub fn main() -> iced::Result {
     iced::application(Shard::new, Shard::update, Shard::view)
         .title("Shard - Color Palette Manager")
+        .font(icons::FONT_BYTES)
         .theme(Shard::theme)
         .subscription(Shard::subscription)
         .run()

@@ -12,6 +12,7 @@ use iced::widget::{
 use iced::{Element, Length};
 
 use crate::color::Color;
+use crate::icons;
 use crate::message::Message;
 use crate::theme::{
     header_style, input_style, secondary_button_style, status_bar_style, BG_BASE, SPACE_MD,
@@ -59,12 +60,12 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .padding(SPACE_SM)
         .style(move |theme, status| input_style(theme, status, has_error));
 
-    let add_button = button(text("Add"))
+    let add_button = button(row![icons::plus().size(14), text("Add")].spacing(SPACE_SM))
         .on_press(Message::AddColor)
         .padding(SPACE_SM)
         .style(crate::theme::primary_button_style);
 
-    let picker_button = button(text("Picker"))
+    let picker_button = button(row![icons::palette().size(14), text("Picker")].spacing(SPACE_SM))
         .on_press(Message::OpenColorPicker(None))
         .padding(SPACE_SM)
         .style(secondary_button_style);
@@ -89,7 +90,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     } else {
         row![
             filter_input,
-            button(text("×").size(14))
+            button(icons::x_circle().size(14))
                 .on_press(Message::FilterChanged(String::new()))
                 .padding(SPACE_SM)
                 .style(secondary_button_style)
