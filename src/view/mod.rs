@@ -4,7 +4,7 @@ pub mod color_card;
 pub mod color_picker;
 
 pub use color_card::view_color_card;
-pub use color_picker::{view_color_picker_modal, ColorPickerState};
+pub use color_picker::{view_color_picker_modal, ColorPickerState, PickerMode};
 
 use iced::widget::{
     button, checkbox, column, container, row, scrollable, stack, text, text_input, Id,

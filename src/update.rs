@@ -6,7 +6,7 @@ use iced::Task;
 use crate::color::{extract_colors_from_text, Color};
 use crate::db;
 use crate::message::Message;
-use crate::view::{ColorPickerState, COLOR_INPUT_ID};
+use crate::view::{ColorPickerState, PickerMode, COLOR_INPUT_ID};
 
 /// Application state.
 #[derive(Default)]
@@ -337,6 +337,53 @@ impl Shard {
             Message::PickerLabelChanged(label) => {
                 if let Some(picker) = &mut self.color_picker {
                     picker.label = label;
+                }
+                Task::none()
+            }
+
+            Message::PickerModeChanged(mode) => {
+                if let Some(picker) = &mut self.color_picker {
+                    // Sync values when switching modes
+                    match mode {
+                        PickerMode::Hsl => {
+                            // Switching to HSL: sync HSL from current RGB
+                            picker.sync_hsl_from_rgb();
+                        }
+                        PickerMode::Oklch => {
+                            // Switching to OKLCH: sync OKLCH from current RGB
+                            picker.sync_oklch_from_rgb();
+                        }
+                    }
+                    picker.mode = mode;
+                }
+                Task::none()
+            }
+
+            Message::PickerOklchLChanged(l) => {
+                if let Some(picker) = &mut self.color_picker {
+                    picker.oklch_l = l;
+                }
+                Task::none()
+            }
+
+            Message::PickerOklchCChanged(c) => {
+                if let Some(picker) = &mut self.color_picker {
+                    picker.oklch_c = c;
+                }
+                Task::none()
+            }
+
+            Message::PickerOklchHChanged(h) => {
+                if let Some(picker) = &mut self.color_picker {
+                    picker.oklch_h = h;
+                }
+                Task::none()
+            }
+
+            Message::PickerCLChanged(chroma, lightness) => {
+                if let Some(picker) = &mut self.color_picker {
+                    picker.oklch_c = chroma;
+                    picker.oklch_l = lightness;
                 }
                 Task::none()
             }

@@ -1,11 +1,13 @@
 //! Reusable canvas widgets for color visualization.
 
 mod alpha_bar;
+mod cl_box;
 mod color_swatch;
 mod hue_bar;
 mod sl_box;
 
 pub use alpha_bar::AlphaBar;
+pub use cl_box::ChromaLightnessBox;
 pub use color_swatch::ColorSwatch;
 pub use hue_bar::HueBar;
 pub use sl_box::SaturationLightnessBox;

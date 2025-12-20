@@ -1,6 +1,7 @@
 //! Application messages for the Shard color palette manager.
 
 use crate::color::Color;
+use crate::view::PickerMode;
 
 /// All messages that can be sent in the application.
 #[derive(Debug, Clone)]
@@ -46,12 +47,18 @@ pub enum Message {
     // Color picker
     OpenColorPicker(Option<i64>), // None = new color, Some(id) = edit existing
     CloseColorPicker,
+    PickerModeChanged(PickerMode),
     PickerHueChanged(f32),
     PickerSaturationChanged(f32),
     PickerLightnessChanged(f32),
     PickerSLChanged(f32, f32), // Combined saturation + lightness from SL box drag
     PickerAlphaChanged(f32),
     PickerLabelChanged(String),
+    // OKLCH mode messages
+    PickerOklchLChanged(f32),
+    PickerOklchCChanged(f32),
+    PickerOklchHChanged(f32),
+    PickerCLChanged(f32, f32), // Combined chroma + lightness from CL box drag
     ConfirmColorPicker,
     ColorUpdated(Result<Color, String>),
 }
