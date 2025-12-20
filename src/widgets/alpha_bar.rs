@@ -1,6 +1,6 @@
-//! A canvas widget that draws an alpha slider with checkerboard background.
+//! A canvas widget that draws an alpha slider with checkerboard background and drag support.
 
-use iced::widget::canvas;
+use iced::widget::canvas::{self, Event};
 use iced::{mouse, Rectangle, Renderer, Theme};
 
 use super::draw_checkerboard;
@@ -12,8 +12,63 @@ pub struct AlphaBar {
     pub alpha: f32,
 }
 
+/// State to track if the user is currently dragging.
+#[derive(Default)]
+pub struct AlphaBarState {
+    is_dragging: bool,
+}
+
+impl AlphaBar {
+    /// Convert cursor x position to alpha value (0-1).
+    fn position_to_alpha(bounds: Rectangle, position: iced::Point) -> f32 {
+        (position.x / bounds.width).clamp(0.0, 1.0)
+    }
+}
+
 impl canvas::Program<Message> for AlphaBar {
-    type State = ();
+    type State = AlphaBarState;
+
+    fn update(
+        &self,
+        state: &mut Self::State,
+        event: &Event,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> Option<canvas::Action<Message>> {
+        let cursor_position = cursor.position_in(bounds)?;
+
+        match event {
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                state.is_dragging = true;
+                let alpha = Self::position_to_alpha(bounds, cursor_position);
+                Some(canvas::Action::publish(Message::PickerAlphaChanged(alpha)).and_capture())
+            }
+            Event::Mouse(mouse::Event::CursorMoved { .. }) if state.is_dragging => {
+                let alpha = Self::position_to_alpha(bounds, cursor_position);
+                Some(canvas::Action::publish(Message::PickerAlphaChanged(alpha)).and_capture())
+            }
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+                if state.is_dragging =>
+            {
+                state.is_dragging = false;
+                Some(canvas::Action::capture())
+            }
+            _ => None,
+        }
+    }
+
+    fn mouse_interaction(
+        &self,
+        state: &Self::State,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> mouse::Interaction {
+        if state.is_dragging || cursor.is_over(bounds) {
+            mouse::Interaction::Pointer
+        } else {
+            mouse::Interaction::default()
+        }
+    }
 
     fn draw(
         &self,

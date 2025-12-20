@@ -1,6 +1,6 @@
-//! A canvas widget that draws a hue spectrum bar.
+//! A canvas widget that draws a hue spectrum bar with drag support.
 
-use iced::widget::canvas;
+use iced::widget::canvas::{self, Event};
 use iced::{mouse, Rectangle, Renderer, Theme};
 
 use crate::color::hsl_to_rgb;
@@ -11,8 +11,63 @@ pub struct HueBar {
     pub current_hue: f32,
 }
 
+/// State to track if the user is currently dragging.
+#[derive(Default)]
+pub struct HueBarState {
+    is_dragging: bool,
+}
+
+impl HueBar {
+    /// Convert cursor x position to hue value (0-360).
+    fn position_to_hue(bounds: Rectangle, position: iced::Point) -> f32 {
+        ((position.x / bounds.width) * 360.0).clamp(0.0, 360.0)
+    }
+}
+
 impl canvas::Program<Message> for HueBar {
-    type State = ();
+    type State = HueBarState;
+
+    fn update(
+        &self,
+        state: &mut Self::State,
+        event: &Event,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> Option<canvas::Action<Message>> {
+        let cursor_position = cursor.position_in(bounds)?;
+
+        match event {
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) => {
+                state.is_dragging = true;
+                let hue = Self::position_to_hue(bounds, cursor_position);
+                Some(canvas::Action::publish(Message::PickerHueChanged(hue)).and_capture())
+            }
+            Event::Mouse(mouse::Event::CursorMoved { .. }) if state.is_dragging => {
+                let hue = Self::position_to_hue(bounds, cursor_position);
+                Some(canvas::Action::publish(Message::PickerHueChanged(hue)).and_capture())
+            }
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+                if state.is_dragging =>
+            {
+                state.is_dragging = false;
+                Some(canvas::Action::capture())
+            }
+            _ => None,
+        }
+    }
+
+    fn mouse_interaction(
+        &self,
+        state: &Self::State,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> mouse::Interaction {
+        if state.is_dragging || cursor.is_over(bounds) {
+            mouse::Interaction::Pointer
+        } else {
+            mouse::Interaction::default()
+        }
+    }
 
     fn draw(
         &self,

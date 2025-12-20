@@ -173,27 +173,14 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
     .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
-    // Hue bar
+    // Hue bar (interactive - supports click and drag)
     let hue_bar = Canvas::new(HueBar {
         current_hue: picker.hue,
     })
     .width(280)
     .height(25);
 
-    // Hue slider
-    let hue_slider = row![
-        text("H")
-            .size(12)
-            .color(TEXT_SECONDARY)
-            .width(Length::Fixed(20.0)),
-        slider(0.0..=360.0, picker.hue, Message::PickerHueChanged)
-            .step(1.0)
-            .width(Length::Fill),
-    ]
-    .spacing(SPACE_SM)
-    .align_y(iced::Alignment::Center);
-
-    // Alpha bar
+    // Alpha bar (interactive - supports click and drag)
     let alpha_bar = Canvas::new(AlphaBar {
         color: {
             let (r, g, b) = picker.to_rgb();
@@ -203,19 +190,6 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
     })
     .width(280)
     .height(25);
-
-    // Alpha slider
-    let alpha_slider = row![
-        text("A")
-            .size(12)
-            .color(TEXT_SECONDARY)
-            .width(Length::Fixed(20.0)),
-        slider(0.0..=1.0, picker.alpha, Message::PickerAlphaChanged)
-            .step(0.01)
-            .width(Length::Fill),
-    ]
-    .spacing(SPACE_SM)
-    .align_y(iced::Alignment::Center);
 
     // Label input
     let label_input = row![
@@ -257,9 +231,7 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
         saturation_slider,
         lightness_slider,
         hue_bar,
-        hue_slider,
         alpha_bar,
-        alpha_slider,
         label_input,
         action_buttons,
     ]
