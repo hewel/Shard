@@ -112,6 +112,25 @@ pub fn update_label(id: i64, label: String) -> Result<(i64, String), String> {
     Ok((id, label))
 }
 
+/// Update a color's RGBA values and label.
+pub fn update_color(id: i64, r: u8, g: u8, b: u8, a: f32, label: String) -> Result<Color, String> {
+    let conn = open_connection()?;
+    conn.execute(
+        "UPDATE colors SET r = ?1, g = ?2, b = ?3, a = ?4, label = ?5 WHERE id = ?6",
+        params![r as i32, g as i32, b as i32, a, label, id],
+    )
+    .map_err(|e| format!("Update error: {}", e))?;
+
+    Ok(Color {
+        id,
+        r,
+        g,
+        b,
+        a,
+        label,
+    })
+}
+
 /// Delete a color by ID.
 pub fn delete_color(id: i64) -> Result<i64, String> {
     let conn = open_connection()?;
