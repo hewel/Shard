@@ -1,10 +1,14 @@
 //! Color card view component.
 
 use iced::widget::{button, column, container, row, text, text_input, Canvas};
-use iced::{Element, Length, Theme};
+use iced::{Element, Length};
 
 use crate::color::Color;
 use crate::message::Message;
+use crate::theme::{
+    card_style, danger_button_style, input_style, primary_button_style, secondary_button_style,
+    subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
+};
 use crate::widgets::ColorSwatch;
 
 /// Render a color card for the palette list.
@@ -13,11 +17,12 @@ pub fn view_color_card<'a>(
     is_selected: bool,
     editing_label: Option<&'a (i64, String)>,
 ) -> Element<'a, Message> {
+    // Larger swatch (72x72)
     let swatch = Canvas::new(ColorSwatch {
         color: color.to_iced_color(),
     })
-    .width(50)
-    .height(50);
+    .width(72)
+    .height(72);
 
     let is_editing = editing_label.map(|(id, _)| *id) == Some(color.id);
 
@@ -28,54 +33,60 @@ pub fn view_color_card<'a>(
                 .on_input(Message::EditLabelChanged)
                 .on_submit(Message::SaveLabel)
                 .width(Length::Fixed(150.0))
-                .padding(5),
+                .padding(SPACE_SM)
+                .style(|theme, status| input_style(theme, status, false)),
             button(text("Save").size(12))
                 .on_press(Message::SaveLabel)
-                .padding(5),
+                .padding(SPACE_SM)
+                .style(primary_button_style),
             button(text("Cancel").size(12))
                 .on_press(Message::CancelEditLabel)
-                .padding(5),
+                .padding(SPACE_SM)
+                .style(secondary_button_style),
         ]
-        .spacing(5)
+        .spacing(SPACE_SM)
         .into()
     } else {
-        button(text(&color.label).size(14))
+        // Label: 15px semibold
+        button(text(&color.label).size(15))
             .on_press(Message::StartEditLabel(color.id))
-            .style(button::text)
+            .style(subtle_button_style)
             .into()
     };
 
-    let hex_display = text(color.to_hex())
-        .size(12)
-        .color(iced::Color::from_rgba(1.0, 1.0, 1.0, 0.7));
+    // Hex display: 12px muted
+    let hex_display = text(color.to_hex()).size(12).color(TEXT_MUTED);
 
+    // Pill-shaped copy buttons using subtle_button_style
     let copy_buttons = row![
         button(text("Hex").size(11))
             .on_press(Message::CopyHex(color.id))
-            .padding(5),
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
         button(text("RGB").size(11))
             .on_press(Message::CopyRgb(color.id))
-            .padding(5),
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
         button(text("HSL").size(11))
             .on_press(Message::CopyHsl(color.id))
-            .padding(5),
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
     ]
-    .spacing(5);
+    .spacing(SPACE_XS);
 
-    let edit_button = button(text("Edit").size(11))
+    // Icon-style edit button (Unicode ✎)
+    let edit_button = button(text("✎").size(14))
         .on_press(Message::OpenColorPicker(Some(color.id)))
-        .padding(5);
+        .padding([SPACE_XS, SPACE_SM])
+        .style(subtle_button_style);
 
-    let delete_button = button(
-        text("Del")
-            .size(11)
-            .color(iced::Color::from_rgb(0.9, 0.3, 0.3)),
-    )
-    .on_press(Message::DeleteColor(color.id))
-    .padding(5)
-    .style(button::text);
+    // Icon-style delete button (Unicode ×)
+    let delete_button = button(text("×").size(16))
+        .on_press(Message::DeleteColor(color.id))
+        .padding([SPACE_XS, SPACE_SM])
+        .style(danger_button_style);
 
-    let info_column = column![label_element, hex_display].spacing(4);
+    let info_column = column![label_element, hex_display].spacing(SPACE_XS);
 
     let card = row![
         swatch,
@@ -84,28 +95,13 @@ pub fn view_color_card<'a>(
         edit_button,
         delete_button
     ]
-    .spacing(15)
-    .padding(10)
+    .spacing(SPACE_MD)
+    .padding(SPACE_MD)
     .align_y(iced::Alignment::Center);
 
     let color_id = color.id;
     let card_container = container(card)
-        .style(move |theme: &Theme| {
-            let palette = theme.extended_palette();
-            let border_color = if is_selected {
-                iced::Color::from_rgb(0.4, 0.7, 1.0) // Highlight selected
-            } else {
-                palette.background.strong.color
-            };
-            let border_width = if is_selected { 2.0 } else { 1.0 };
-            container::Style::default()
-                .background(palette.background.weak.color)
-                .border(iced::Border {
-                    color: border_color,
-                    width: border_width,
-                    radius: 8.0.into(),
-                })
-        })
+        .style(move |theme| card_style(theme, is_selected))
         .width(Length::Fill);
 
     // Wrap in a button for click-to-select

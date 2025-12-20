@@ -13,6 +13,10 @@ use iced::{Element, Length};
 
 use crate::color::Color;
 use crate::message::Message;
+use crate::theme::{
+    header_style, input_style, secondary_button_style, status_bar_style, BG_BASE, SPACE_MD,
+    SPACE_SM, TEXT_SECONDARY,
+};
 
 /// Input field ID for keyboard focus.
 pub const COLOR_INPUT_ID: &str = "color_input";
@@ -43,47 +47,42 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         selected_color,
         color_picker,
     } = ctx;
+
+    let has_error = input_error.is_some();
+
     // Header with input and controls
     let color_input_widget = text_input("Enter color (hex, rgb, hsl)...", color_input)
         .id(Id::from(COLOR_INPUT_ID))
         .on_input(Message::ColorInputChanged)
         .on_submit(Message::AddColor)
         .width(Length::FillPortion(3))
-        .padding(10)
-        .style(move |theme, status| {
-            if input_error.is_some() {
-                iced::widget::text_input::Style {
-                    border: iced::Border {
-                        color: iced::Color::from_rgb(0.8, 0.2, 0.2),
-                        width: 2.0,
-                        radius: 4.0.into(),
-                    },
-                    ..iced::widget::text_input::default(theme, status)
-                }
-            } else {
-                iced::widget::text_input::default(theme, status)
-            }
-        });
+        .padding(SPACE_SM)
+        .style(move |theme, status| input_style(theme, status, has_error));
 
-    let add_button = button(text("Add")).on_press(Message::AddColor).padding(10);
+    let add_button = button(text("Add"))
+        .on_press(Message::AddColor)
+        .padding(SPACE_SM)
+        .style(crate::theme::primary_button_style);
 
     let picker_button = button(text("Picker"))
         .on_press(Message::OpenColorPicker(None))
-        .padding(10);
+        .padding(SPACE_SM)
+        .style(secondary_button_style);
 
     let clipboard_toggle = row![
         checkbox(is_listening_clipboard).on_toggle(Message::ToggleClipboard),
-        text("Listen Clipboard").size(14),
+        text("Listen Clipboard").size(14).color(TEXT_SECONDARY),
     ]
-    .spacing(5)
+    .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
     // Filter input with clear button
     let filter_input = text_input("Filter...", filter_text)
         .on_input(Message::FilterChanged)
         .width(Length::Fixed(150.0))
-        .padding(10)
-        .size(14);
+        .padding(SPACE_SM)
+        .size(14)
+        .style(|theme, status| input_style(theme, status, false));
 
     let filter_section: Element<'_, Message> = if filter_text.is_empty() {
         filter_input.into()
@@ -92,10 +91,10 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
             filter_input,
             button(text("×").size(14))
                 .on_press(Message::FilterChanged(String::new()))
-                .padding(10)
-                .style(button::text)
+                .padding(SPACE_SM)
+                .style(secondary_button_style)
         ]
-        .spacing(5)
+        .spacing(SPACE_SM)
         .align_y(iced::Alignment::Center)
         .into()
     };
@@ -107,19 +106,23 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         clipboard_toggle,
         filter_section,
     ]
-    .spacing(10)
-    .padding(15)
+    .spacing(SPACE_SM)
+    .padding(SPACE_MD)
     .align_y(iced::Alignment::Center);
+
+    // Wrap header in container with header_style
+    let header = container(input_row).width(Length::Fill).style(header_style);
 
     // Error message
     let error_text: Element<'_, Message> = if let Some(error) = input_error {
-        container(
-            text(error)
-                .size(12)
-                .color(iced::Color::from_rgb(0.9, 0.3, 0.3)),
-        )
-        .padding(iced::Padding::new(0.0).left(15.0).right(15.0).bottom(10.0))
-        .into()
+        container(text(error).size(12).color(crate::theme::DANGER))
+            .padding(
+                iced::Padding::new(0.0)
+                    .left(SPACE_MD)
+                    .right(SPACE_MD)
+                    .bottom(SPACE_SM),
+            )
+            .into()
     } else {
         container(text("")).into()
     };
@@ -144,18 +147,18 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         container(
             text("No colors yet. Add a color above or enable clipboard listening.")
                 .size(14)
-                .color(iced::Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+                .color(TEXT_SECONDARY),
         )
-        .padding(20)
+        .padding(SPACE_MD)
         .center_x(Length::Fill)
         .into()
     } else if filtered_colors.is_empty() {
         container(
             text(format!("No colors match '{}'", filter_text))
                 .size(14)
-                .color(iced::Color::from_rgba(1.0, 1.0, 1.0, 0.5)),
+                .color(TEXT_SECONDARY),
         )
-        .padding(20)
+        .padding(SPACE_MD)
         .center_x(Length::Fill)
         .into()
     } else {
@@ -167,7 +170,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
             })
             .collect();
 
-        scrollable(column(items).spacing(10).padding(15))
+        scrollable(column(items).spacing(SPACE_SM).padding(SPACE_MD))
             .height(Length::Fill)
             .into()
     };
@@ -179,16 +182,24 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     } else {
         format!("{} / {} colors", filtered_colors.len(), colors.len())
     };
-    let status_bar = row![
-        text(color_count).size(12),
-        text("|").size(12),
-        text(status_text).size(12),
+    let status_bar_content = row![
+        text(color_count).size(12).color(TEXT_SECONDARY),
+        text("|").size(12).color(TEXT_SECONDARY),
+        text(status_text).size(12).color(TEXT_SECONDARY),
     ]
-    .spacing(10)
-    .padding(10);
+    .spacing(SPACE_SM)
+    .padding(SPACE_SM);
 
-    // Main layout
-    let main_content = column![input_row, error_text, colors_list, status_bar];
+    // Wrap status bar in container with status_bar_style
+    let status_bar = container(status_bar_content)
+        .width(Length::Fill)
+        .style(status_bar_style);
+
+    // Main layout with BG_BASE background
+    let main_content = container(column![header, error_text, colors_list, status_bar])
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
 
     // If color picker is open, show modal overlay
     if let Some(picker) = color_picker {

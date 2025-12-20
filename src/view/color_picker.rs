@@ -3,10 +3,15 @@
 use iced::widget::{
     button, column, container, mouse_area, opaque, row, slider, text, text_input, Canvas,
 };
-use iced::{Element, Length, Theme};
+use iced::{Element, Length};
 
 use crate::color::{hsl_to_rgb, rgb_to_hsl, Color};
 use crate::message::Message;
+use crate::theme::{
+    input_style, modal_dialog_style, modal_overlay_style, primary_button_style,
+    secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
+    TEXT_PRIMARY, TEXT_SECONDARY,
+};
 use crate::widgets::{AlphaBar, ColorSwatch, HueBar, SaturationLightnessBox};
 
 /// State for the color picker modal.
@@ -82,6 +87,17 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
         "New Color"
     };
 
+    // Header row with title and close button
+    let header_row = row![
+        text(title).size(20).color(TEXT_PRIMARY),
+        iced::widget::Space::new().width(Length::Fill),
+        button(text("×").size(18))
+            .on_press(Message::CloseColorPicker)
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
+    ]
+    .align_y(iced::Alignment::Center);
+
     // Preview swatch (large)
     let preview_swatch = Canvas::new(ColorSwatch {
         color: picker.to_iced_color(),
@@ -98,7 +114,8 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
             picker.saturation * 100.0,
             picker.lightness * 100.0
         ))
-        .size(12),
+        .size(12)
+        .color(TEXT_SECONDARY),
         text(format!(
             "R: {}  G: {}  B: {}  A: {:.0}%",
             r,
@@ -106,13 +123,14 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
             b,
             picker.alpha * 100.0
         ))
-        .size(12),
-        text(picker.to_color().to_hex()).size(12),
+        .size(12)
+        .color(TEXT_SECONDARY),
+        text(picker.to_color().to_hex()).size(12).color(TEXT_MUTED),
     ]
-    .spacing(4);
+    .spacing(SPACE_XS);
 
     let preview_row = row![preview_swatch, color_values]
-        .spacing(15)
+        .spacing(SPACE_MD)
         .align_y(iced::Alignment::Center);
 
     // Saturation/Lightness box
@@ -126,7 +144,10 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
 
     // Saturation slider
     let saturation_slider = row![
-        text("S").size(12).width(Length::Fixed(20.0)),
+        text("S")
+            .size(12)
+            .color(TEXT_SECONDARY)
+            .width(Length::Fixed(20.0)),
         slider(
             0.0..=1.0,
             picker.saturation,
@@ -135,17 +156,20 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
         .step(0.01)
         .width(Length::Fill),
     ]
-    .spacing(10)
+    .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
     // Lightness slider
     let lightness_slider = row![
-        text("L").size(12).width(Length::Fixed(20.0)),
+        text("L")
+            .size(12)
+            .color(TEXT_SECONDARY)
+            .width(Length::Fixed(20.0)),
         slider(0.0..=1.0, picker.lightness, Message::PickerLightnessChanged)
             .step(0.01)
             .width(Length::Fill),
     ]
-    .spacing(10)
+    .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
     // Hue bar
@@ -157,12 +181,15 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
 
     // Hue slider
     let hue_slider = row![
-        text("H").size(12).width(Length::Fixed(20.0)),
+        text("H")
+            .size(12)
+            .color(TEXT_SECONDARY)
+            .width(Length::Fixed(20.0)),
         slider(0.0..=360.0, picker.hue, Message::PickerHueChanged)
             .step(1.0)
             .width(Length::Fill),
     ]
-    .spacing(10)
+    .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
     // Alpha bar
@@ -178,31 +205,35 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
 
     // Alpha slider
     let alpha_slider = row![
-        text("A").size(12).width(Length::Fixed(20.0)),
+        text("A")
+            .size(12)
+            .color(TEXT_SECONDARY)
+            .width(Length::Fixed(20.0)),
         slider(0.0..=1.0, picker.alpha, Message::PickerAlphaChanged)
             .step(0.01)
             .width(Length::Fill),
     ]
-    .spacing(10)
+    .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
     // Label input
     let label_input = row![
-        text("Label:").size(12),
+        text("Label:").size(12).color(TEXT_SECONDARY),
         text_input("Color label...", &picker.label)
             .on_input(Message::PickerLabelChanged)
-            .padding(8)
-            .width(Length::Fill),
+            .padding(SPACE_SM)
+            .width(Length::Fill)
+            .style(|theme, status| input_style(theme, status, false)),
     ]
-    .spacing(10)
+    .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
     // Action buttons
     let action_buttons = row![
         button(text("Cancel").size(14))
             .on_press(Message::CloseColorPicker)
-            .padding(10)
-            .style(button::secondary),
+            .padding(SPACE_SM)
+            .style(secondary_button_style),
         button(
             text(if picker.editing_id.is_some() {
                 "Save"
@@ -212,14 +243,14 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
             .size(14)
         )
         .on_press(Message::ConfirmColorPicker)
-        .padding(10)
-        .style(button::primary),
+        .padding(SPACE_SM)
+        .style(primary_button_style),
     ]
-    .spacing(10);
+    .spacing(SPACE_SM);
 
     // Modal content
     let modal_content = column![
-        text(title).size(20),
+        header_row,
         preview_row,
         sl_box,
         saturation_slider,
@@ -231,21 +262,12 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
         label_input,
         action_buttons,
     ]
-    .spacing(12)
-    .padding(20)
+    .spacing(SPACE_MD)
+    .padding(SPACE_MD)
     .width(Length::Fixed(320.0));
 
-    // Modal dialog with background
-    let modal_dialog = container(modal_content).style(|theme: &Theme| {
-        let palette = theme.extended_palette();
-        container::Style::default()
-            .background(palette.background.base.color)
-            .border(iced::Border {
-                color: palette.background.strong.color,
-                width: 2.0,
-                radius: 12.0.into(),
-            })
-    });
+    // Modal dialog with modal_dialog_style
+    let modal_dialog = container(modal_content).style(modal_dialog_style);
 
     // Semi-transparent overlay that closes the modal when clicked
     let overlay = mouse_area(
@@ -254,9 +276,7 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
             .height(Length::Fill)
             .center_x(Length::Fill)
             .center_y(Length::Fill)
-            .style(|_theme: &Theme| {
-                container::Style::default().background(iced::Color::from_rgba(0.0, 0.0, 0.0, 0.6))
-            }),
+            .style(modal_overlay_style),
     )
     .on_press(Message::CloseColorPicker);
 

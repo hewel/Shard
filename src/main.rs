@@ -5,6 +5,7 @@
 mod color;
 mod db;
 mod message;
+mod theme;
 mod update;
 mod view;
 mod widgets;
