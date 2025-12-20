@@ -18,7 +18,6 @@ pub struct Shard {
     pub input_error: Option<String>,
     pub is_listening_clipboard: bool,
     pub last_clipboard_content: Option<String>,
-    pub editing_label: Option<(i64, String)>,
     pub status_message: Option<String>,
     pub filter_text: String,
     pub filter_kind: Option<SnippetKind>,
@@ -155,51 +154,6 @@ impl Shard {
                 Task::none()
             }
 
-            Message::StartEditLabel(id) => {
-                if let Some(snippet) = self.snippets.iter().find(|s| s.id == id) {
-                    self.editing_label = Some((id, snippet.label.clone()));
-                }
-                Task::none()
-            }
-
-            Message::EditLabelChanged(text) => {
-                if let Some((id, _)) = &self.editing_label {
-                    self.editing_label = Some((*id, text));
-                }
-                Task::none()
-            }
-
-            Message::SaveLabel => {
-                if let Some((id, label)) = self.editing_label.take() {
-                    Task::perform(
-                        async move { db::update_label(id, label) },
-                        Message::LabelSaved,
-                    )
-                } else {
-                    Task::none()
-                }
-            }
-
-            Message::CancelEditLabel => {
-                self.editing_label = None;
-                Task::none()
-            }
-
-            Message::LabelSaved(result) => {
-                match result {
-                    Ok((id, label)) => {
-                        if let Some(snippet) = self.snippets.iter_mut().find(|s| s.id == id) {
-                            snippet.label = label;
-                        }
-                        self.status_message = Some("Label saved".to_string());
-                    }
-                    Err(e) => {
-                        self.status_message = Some(format!("Save failed: {}", e));
-                    }
-                }
-                Task::none()
-            }
-
             Message::ToggleClipboard(enabled) => {
                 self.is_listening_clipboard = enabled;
                 if enabled {
@@ -294,15 +248,13 @@ impl Shard {
             Message::FocusColorInput => operation::focus(COLOR_INPUT_ID),
 
             Message::EscapePressed => {
-                // Priority: close modals > cancel label editing > clear filter > deselect
+                // Priority: close modals > clear filter > deselect
                 if self.color_picker.is_some() {
                     self.color_picker = None;
                 } else if self.code_editor.is_some() {
                     self.code_editor = None;
                 } else if self.text_editor.is_some() {
                     self.text_editor = None;
-                } else if self.editing_label.is_some() {
-                    self.editing_label = None;
                 } else if !self.filter_text.is_empty() {
                     self.filter_text.clear();
                 } else {

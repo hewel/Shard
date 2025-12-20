@@ -36,7 +36,6 @@ impl Shard {
             color_input: &self.color_input,
             input_error: self.input_error.as_deref(),
             is_listening_clipboard: self.is_listening_clipboard,
-            editing_label: self.editing_label.as_ref(),
             status_message: self.status_message.as_deref(),
             filter_text: &self.filter_text,
             filter_kind: self.filter_kind.as_ref(),

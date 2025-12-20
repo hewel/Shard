@@ -1,14 +1,13 @@
 //! Color card view component.
 
-use iced::widget::{button, column, container, row, text, text_input, Canvas};
+use iced::widget::{button, column, container, row, text, Canvas};
 use iced::{Element, Length};
 
 use crate::icons;
 use crate::message::Message;
 use crate::snippet::ColorData;
 use crate::theme::{
-    card_style, danger_button_style, input_style, primary_button_style, secondary_button_style,
-    subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
+    card_style, danger_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
 };
 use crate::widgets::ColorSwatch;
 
@@ -18,7 +17,6 @@ pub fn view_color_card<'a>(
     label: &'a str,
     color: &'a ColorData,
     is_selected: bool,
-    editing_label: Option<&'a (i64, String)>,
 ) -> Element<'a, Message> {
     // Color swatch (72x72)
     let swatch = Canvas::new(ColorSwatch {
@@ -26,8 +24,6 @@ pub fn view_color_card<'a>(
     })
     .width(72)
     .height(72);
-
-    let is_editing = editing_label.map(|(eid, _)| *eid) == Some(id);
 
     // Hex display
     let hex_display = text(color.to_hex()).size(12).color(TEXT_MUTED);
@@ -65,34 +61,7 @@ pub fn view_color_card<'a>(
         .padding([SPACE_XS, SPACE_SM])
         .style(danger_button_style);
 
-    let info_column = column![
-        if is_editing {
-            let edit_text = editing_label.map(|(_, t)| t.as_str()).unwrap_or("");
-            row![
-                text_input("Label...", edit_text)
-                    .on_input(Message::EditLabelChanged)
-                    .on_submit(Message::SaveLabel)
-                    .width(Length::Fixed(150.0))
-                    .padding(SPACE_SM)
-                    .style(|theme, status| input_style(theme, status, false)),
-                button(text("Save").size(12))
-                    .on_press(Message::SaveLabel)
-                    .padding(SPACE_SM)
-                    .style(primary_button_style),
-                button(text("Cancel").size(12))
-                    .on_press(Message::CancelEditLabel)
-                    .padding(SPACE_SM)
-                    .style(secondary_button_style),
-            ]
-            .spacing(SPACE_SM)
-        } else {
-            row![button(text(label).size(15))
-                .on_press(Message::StartEditLabel(id))
-                .style(subtle_button_style)]
-        },
-        hex_display
-    ]
-    .spacing(SPACE_XS);
+    let info_column = column![text(label).size(15), hex_display].spacing(SPACE_XS);
 
     let card = row![
         swatch,

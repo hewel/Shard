@@ -313,6 +313,7 @@ pub fn insert_snippet(snippet: Snippet) -> Result<Snippet, String> {
 }
 
 /// Update a snippet's label.
+#[allow(dead_code)]
 pub fn update_label(id: i64, label: String) -> Result<(i64, String), String> {
     let conn = open_connection()?;
     conn.execute(

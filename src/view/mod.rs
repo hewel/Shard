@@ -36,7 +36,6 @@ pub struct ViewContext<'a> {
     pub color_input: &'a str,
     pub input_error: Option<&'a str>,
     pub is_listening_clipboard: bool,
-    pub editing_label: Option<&'a (i64, String)>,
     pub status_message: Option<&'a str>,
     pub filter_text: &'a str,
     pub filter_kind: Option<&'a SnippetKind>,
@@ -53,7 +52,6 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         color_input,
         input_error,
         is_listening_clipboard,
-        editing_label,
         status_message,
         filter_text,
         filter_kind,
@@ -213,7 +211,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
             .iter()
             .map(|snippet| {
                 let is_selected = selected_snippet == Some(snippet.id);
-                view_snippet_card(snippet, is_selected, editing_label)
+                view_snippet_card(snippet, is_selected)
             })
             .collect();
 
@@ -279,28 +277,14 @@ fn tab_button(label: &str, is_active: bool, on_press: Message) -> Element<'_, Me
 }
 
 /// Render a snippet card based on its type.
-fn view_snippet_card<'a>(
-    snippet: &'a Snippet,
-    is_selected: bool,
-    editing_label: Option<&'a (i64, String)>,
-) -> Element<'a, Message> {
+fn view_snippet_card(snippet: &Snippet, is_selected: bool) -> Element<'_, Message> {
     match &snippet.content {
-        SnippetContent::Color(color) => view_color_card(
-            snippet.id,
-            &snippet.label,
-            color,
-            is_selected,
-            editing_label,
-        ),
-        SnippetContent::Code(code) => {
-            view_code_card(snippet.id, &snippet.label, code, is_selected, editing_label)
+        SnippetContent::Color(color) => {
+            view_color_card(snippet.id, &snippet.label, color, is_selected)
         }
-        SnippetContent::Text(text_data) => view_text_card(
-            snippet.id,
-            &snippet.label,
-            text_data,
-            is_selected,
-            editing_label,
-        ),
+        SnippetContent::Code(code) => view_code_card(snippet.id, &snippet.label, code, is_selected),
+        SnippetContent::Text(text_data) => {
+            view_text_card(snippet.id, &snippet.label, text_data, is_selected)
+        }
     }
 }

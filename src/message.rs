@@ -25,13 +25,6 @@ pub enum Message {
     SnippetDeleted(Result<i64, String>),
     SelectSnippet(Option<i64>),
 
-    // === Label Editing ===
-    StartEditLabel(i64),
-    EditLabelChanged(String),
-    SaveLabel,
-    CancelEditLabel,
-    LabelSaved(Result<(i64, String), String>),
-
     // === Clipboard Listening ===
     ToggleClipboard(bool),
     ClipboardTick,

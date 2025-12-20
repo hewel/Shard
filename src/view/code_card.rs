@@ -1,14 +1,14 @@
 //! Code snippet card view component.
 
-use iced::widget::{button, column, container, row, text, text_input};
+use iced::widget::{button, column, container, row, text};
 use iced::{Element, Length};
 
 use crate::icons;
 use crate::message::Message;
 use crate::snippet::CodeData;
 use crate::theme::{
-    card_style, danger_button_style, input_style, primary_button_style, secondary_button_style,
-    subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
+    card_style, danger_button_style, subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM, SPACE_XS,
+    TEXT_MUTED, TEXT_SECONDARY,
 };
 
 /// Render a code snippet card.
@@ -17,7 +17,6 @@ pub fn view_code_card<'a>(
     label: &'a str,
     code: &'a CodeData,
     is_selected: bool,
-    editing_label: Option<&'a (i64, String)>,
 ) -> Element<'a, Message> {
     // Code icon placeholder (colored box for code)
     let code_icon = container(
@@ -31,8 +30,6 @@ pub fn view_code_card<'a>(
     .center_x(72)
     .center_y(72)
     .style(|_theme| iced::widget::container::Style::default().background(BG_SURFACE));
-
-    let is_editing = editing_label.map(|(eid, _)| *eid) == Some(id);
 
     // Language badge and line count
     let language_badge = container(text(&code.language).size(11).color(TEXT_MUTED))
@@ -69,35 +66,9 @@ pub fn view_code_card<'a>(
         .style(danger_button_style);
 
     let info_column = column![
-        row![
-            if is_editing {
-                let edit_text = editing_label.map(|(_, t)| t.as_str()).unwrap_or("");
-                row![
-                    text_input("Label...", edit_text)
-                        .on_input(Message::EditLabelChanged)
-                        .on_submit(Message::SaveLabel)
-                        .width(Length::Fixed(150.0))
-                        .padding(SPACE_SM)
-                        .style(|theme, status| input_style(theme, status, false)),
-                    button(text("Save").size(12))
-                        .on_press(Message::SaveLabel)
-                        .padding(SPACE_SM)
-                        .style(primary_button_style),
-                    button(text("Cancel").size(12))
-                        .on_press(Message::CancelEditLabel)
-                        .padding(SPACE_SM)
-                        .style(secondary_button_style),
-                ]
-                .spacing(SPACE_SM)
-            } else {
-                row![button(text(label).size(15))
-                    .on_press(Message::StartEditLabel(id))
-                    .style(subtle_button_style)]
-            },
-            language_badge
-        ]
-        .spacing(SPACE_SM)
-        .align_y(iced::Alignment::Center),
+        row![text(label).size(15), language_badge]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center),
         preview_text,
         line_count,
     ]
