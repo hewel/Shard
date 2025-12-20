@@ -60,15 +60,23 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .padding(SPACE_SM)
         .style(move |theme, status| input_style(theme, status, has_error));
 
-    let add_button = button(row![icons::plus().size(14), text("Add")].spacing(SPACE_SM))
-        .on_press(Message::AddColor)
-        .padding(SPACE_SM)
-        .style(crate::theme::primary_button_style);
+    let add_button = button(
+        row![icons::plus().size(14), text("Add")]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::AddColor)
+    .padding(SPACE_SM)
+    .style(crate::theme::primary_button_style);
 
-    let picker_button = button(row![icons::palette().size(14), text("Picker")].spacing(SPACE_SM))
-        .on_press(Message::OpenColorPicker(None))
-        .padding(SPACE_SM)
-        .style(secondary_button_style);
+    let picker_button = button(
+        row![icons::palette().size(14), text("Picker")]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::OpenColorPicker(None))
+    .padding(SPACE_SM)
+    .style(secondary_button_style);
 
     let clipboard_toggle = row![
         checkbox(is_listening_clipboard).on_toggle(Message::ToggleClipboard),

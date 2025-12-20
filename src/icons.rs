@@ -1,4 +1,4 @@
-//! Phosphor Icons Light font integration.
+//! Font integration for icons and text.
 
 #![allow(dead_code)]
 
@@ -6,14 +6,20 @@ use iced::widget::text;
 use iced::Font;
 
 /// Phosphor Light icon font.
-pub const FONT: Font = Font::with_name("Phosphor-Light");
+pub const ICON_FONT: Font = Font::with_name("Phosphor-Light");
 
-/// Font bytes for loading.
-pub const FONT_BYTES: &[u8] = include_bytes!("../fonts/Phosphor-Light.ttf");
+/// Icon font bytes for loading.
+pub const ICON_FONT_BYTES: &[u8] = include_bytes!("../fonts/Phosphor-Light.ttf");
+
+/// Lilex Thin - default text font.
+pub const TEXT_FONT: Font = Font::with_name("Lilex");
+
+/// Text font bytes for loading.
+pub const TEXT_FONT_BYTES: &[u8] = include_bytes!("../fonts/Lilex-Thin.ttf");
 
 /// Create an icon text widget from a codepoint.
 fn icon(codepoint: char) -> text::Text<'static> {
-    text(codepoint.to_string()).font(FONT)
+    text(codepoint.to_string()).font(ICON_FONT)
 }
 
 // === Icon Functions ===

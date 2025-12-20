@@ -20,7 +20,9 @@ pub use update::Shard;
 pub fn main() -> iced::Result {
     iced::application(Shard::new, Shard::update, Shard::view)
         .title("Shard - Color Palette Manager")
-        .font(icons::FONT_BYTES)
+        .font(icons::ICON_FONT_BYTES)
+        .font(icons::TEXT_FONT_BYTES)
+        .default_font(icons::TEXT_FONT)
         .theme(Shard::theme)
         .subscription(Shard::subscription)
         .run()
