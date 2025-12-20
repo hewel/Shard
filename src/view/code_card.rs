@@ -72,7 +72,7 @@ pub fn view_code_card<'a>(
         .style(danger_button_style);
 
     let info_column = column![
-        row![text(label).size(15), language_badge]
+        row![text(label).size(15).color(TEXT_SECONDARY), language_badge]
             .spacing(SPACE_SM)
             .align_y(iced::Alignment::Center),
         preview_text,

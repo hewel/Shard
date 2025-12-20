@@ -71,7 +71,7 @@ pub fn view_text_card<'a>(
         .padding([SPACE_XS, SPACE_SM])
         .style(danger_button_style);
 
-    let info_column = column![text(label).size(15), preview_text, stats,].spacing(SPACE_XS);
+    let info_column = column![text(label).size(15).color(TEXT_SECONDARY), preview_text, stats,].spacing(SPACE_XS);
 
     let action_row = row![
         copy_button,

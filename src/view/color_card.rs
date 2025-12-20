@@ -7,7 +7,7 @@ use crate::icons;
 use crate::message::Message;
 use crate::snippet::ColorData;
 use crate::theme::{
-    card_style, danger_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
+    SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY, card_style, danger_button_style, subtle_button_style
 };
 use crate::widgets::ColorSwatch;
 
@@ -61,7 +61,7 @@ pub fn view_color_card<'a>(
         .padding([SPACE_XS, SPACE_SM])
         .style(danger_button_style);
 
-    let info_column = column![text(label).size(15), hex_display].spacing(SPACE_XS);
+    let info_column = column![text(label).size(15).color(TEXT_SECONDARY), hex_display].spacing(SPACE_XS);
 
     let card = row![
         swatch,
