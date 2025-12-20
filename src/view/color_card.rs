@@ -30,19 +30,19 @@ pub fn view_color_card<'a>(
 
     // Copy buttons
     let copy_buttons = row![
-        button(text("Hex").size(11))
+        button(row![icons::copy().size(11), text("Hex").size(11)].spacing(4))
             .on_press(Message::CopyHex(id))
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
-        button(text("RGB").size(11))
+        button(row![icons::copy().size(11), text("RGB").size(11)].spacing(4))
             .on_press(Message::CopyRgb(id))
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
-        button(text("HSL").size(11))
+        button(row![icons::copy().size(11), text("HSL").size(11)].spacing(4))
             .on_press(Message::CopyHsl(id))
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
-        button(text("OKLCH").size(11))
+        button(row![icons::copy().size(11), text("OKLCH").size(11)].spacing(4))
             .on_press(Message::CopyOklch(id))
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),

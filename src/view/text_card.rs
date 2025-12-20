@@ -48,7 +48,7 @@ pub fn view_text_card<'a>(
         .width(Length::Fixed(300.0));
 
     // Copy button
-    let copy_button = button(text("Copy").size(11))
+    let copy_button = button(icons::copy().size(14))
         .on_press(Message::CopySnippet(id))
         .padding([SPACE_XS, SPACE_SM])
         .style(subtle_button_style);
