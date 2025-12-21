@@ -87,4 +87,8 @@ pub enum Message {
     SettingsCustomCommandChanged(String),
     ConfirmSettings,
     ConfigSaved(Result<(), String>),
+
+    // === Add Menu Dropdown ===
+    ToggleAddMenu,
+    CloseAddMenu,
 }

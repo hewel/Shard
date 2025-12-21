@@ -17,7 +17,8 @@ pub use text_card::view_text_card;
 pub use text_editor::TextEditorState;
 
 use iced::widget::{
-    button, checkbox, column, container, row, scrollable, stack, text, text_input, Id,
+    button, checkbox, column, container, mouse_area, opaque, row, scrollable, stack, text,
+    text_input, Id,
 };
 use iced::{Element, Length};
 
@@ -25,7 +26,7 @@ use crate::icons;
 use crate::message::Message;
 use crate::snippet::{Snippet, SnippetContent, SnippetKind};
 use crate::theme::{
-    button_group_inner_style, button_group_style, header_style, input_style, primary_button_style,
+    dropdown_item_style, dropdown_menu_style, header_style, input_style, primary_button_style,
     secondary_button_style, status_bar_style, subtle_button_style, BG_BASE, SPACE_LG, SPACE_MD,
     SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
@@ -47,6 +48,7 @@ pub struct ViewContext<'a> {
     pub code_editor: Option<&'a CodeEditorState>,
     pub text_editor: Option<&'a TextEditorState>,
     pub settings: Option<&'a SettingsState>,
+    pub add_menu_open: bool,
 }
 
 /// Render the main application view.
@@ -64,11 +66,12 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         code_editor,
         text_editor,
         settings,
+        add_menu_open,
     } = ctx;
 
     let has_error = input_error.is_some();
 
-    // === HEADER ROW 1: Color input + Add buttons ===
+    // === HEADER ROW 1: Color input + Add dropdown ===
     let color_input_widget = text_input("Enter color (hex, rgb, hsl, oklch)...", color_input)
         .id(Id::from(COLOR_INPUT_ID))
         .on_input(Message::ColorInputChanged)
@@ -77,42 +80,13 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .padding(SPACE_SM)
         .style(move |theme, status| input_style(theme, status, has_error));
 
-    // Add buttons group
-    let add_color_button = button(
-        row![icons::palette().size(14), text("Color").size(13)]
-            .spacing(SPACE_XS)
-            .align_y(iced::Alignment::Center),
-    )
-    .on_press(Message::OpenColorPicker(None))
-    .padding([SPACE_XS, SPACE_SM])
-    .style(button_group_inner_style);
+    // Add button (plus icon) that toggles dropdown
+    let add_button = button(icons::plus().size(16))
+        .on_press(Message::ToggleAddMenu)
+        .padding([SPACE_SM, SPACE_SM])
+        .style(primary_button_style);
 
-    let add_code_button = button(
-        row![icons::code().size(14), text("Code").size(13)]
-            .spacing(SPACE_XS)
-            .align_y(iced::Alignment::Center),
-    )
-    .on_press(Message::OpenCodeEditor(None))
-    .padding([SPACE_XS, SPACE_SM])
-    .style(button_group_inner_style);
-
-    let add_text_button = button(
-        row![icons::text_icon().size(14), text("Text").size(13)]
-            .spacing(SPACE_XS)
-            .align_y(iced::Alignment::Center),
-    )
-    .on_press(Message::OpenTextEditor(None))
-    .padding([SPACE_XS, SPACE_SM])
-    .style(button_group_inner_style);
-
-    // Button group container with parallel corner styling
-    let add_buttons_group = container(
-        row![add_color_button, add_code_button, add_text_button].spacing(SPACE_XS),
-    )
-    .padding([SPACE_XS, SPACE_XS])
-    .style(button_group_style);
-
-    let header_row_1 = row![color_input_widget, add_buttons_group]
+    let header_row_1 = row![color_input_widget, add_button]
         .spacing(SPACE_MD)
         .align_y(iced::Alignment::Center);
 
@@ -186,7 +160,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         column![header_row_1, header_row_2].spacing(SPACE_SM),
     )
     .width(Length::Fill)
-    .padding([SPACE_SM, SPACE_MD])
+    .padding([SPACE_MD, SPACE_MD])
     .style(header_style);
 
     // Error message
@@ -279,7 +253,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     .height(Length::Fill)
     .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
 
-    // Stack modals on top
+    // Stack modals/menus on top
     if let Some(s) = settings {
         stack![main_content, settings::view_settings_modal(s)].into()
     } else if let Some(picker) = color_picker {
@@ -288,6 +262,8 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         stack![main_content, code_editor::view_code_editor_modal(editor)].into()
     } else if let Some(editor) = text_editor {
         stack![main_content, text_editor::view_text_editor_modal(editor)].into()
+    } else if add_menu_open {
+        stack![main_content, view_add_menu_dropdown()].into()
     } else {
         main_content.into()
     }
@@ -317,4 +293,70 @@ fn view_snippet_card(snippet: &Snippet, is_selected: bool) -> Element<'_, Messag
             view_text_card(snippet.id, &snippet.label, text_data, is_selected)
         }
     }
+}
+
+/// Render the add menu dropdown overlay.
+fn view_add_menu_dropdown() -> Element<'static, Message> {
+    // Dropdown menu items
+    let color_item = button(
+        row![icons::palette().size(14), text("Color").size(13)]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::OpenColorPicker(None))
+    .padding([SPACE_SM, SPACE_MD])
+    .width(Length::Fill)
+    .style(dropdown_item_style);
+
+    let code_item = button(
+        row![icons::code().size(14), text("Code").size(13)]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::OpenCodeEditor(None))
+    .padding([SPACE_SM, SPACE_MD])
+    .width(Length::Fill)
+    .style(dropdown_item_style);
+
+    let text_item = button(
+        row![icons::text_icon().size(14), text("Text").size(13)]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::OpenTextEditor(None))
+    .padding([SPACE_SM, SPACE_MD])
+    .width(Length::Fill)
+    .style(dropdown_item_style);
+
+    // Menu container
+    let menu = container(
+        column![color_item, code_item, text_item].spacing(2),
+    )
+    .padding(SPACE_XS)
+    .width(Length::Fixed(140.0))
+    .style(dropdown_menu_style);
+
+    // Position the menu in the top-right area (below the add button)
+    // We use a column with a spacer to push content down, and a row with spacer to push right
+    let positioned_menu = column![
+        // Vertical offset from top (header height approx)
+        container(text("")).height(Length::Fixed(52.0)),
+        row![
+            // Horizontal spacer to push menu to the right
+            container(text("")).width(Length::Fill),
+            menu,
+            // Right margin to align with the add button
+            container(text("")).width(Length::Fixed(SPACE_MD)),
+        ],
+    ];
+
+    // Click-outside-to-close overlay
+    let overlay = mouse_area(
+        container(opaque(positioned_menu))
+            .width(Length::Fill)
+            .height(Length::Fill),
+    )
+    .on_press(Message::CloseAddMenu);
+
+    overlay.into()
 }

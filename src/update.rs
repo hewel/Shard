@@ -29,6 +29,7 @@ pub struct Shard {
     pub text_editor: Option<TextEditorState>,
     pub settings: Option<SettingsState>,
     pub config: Config,
+    pub add_menu_open: bool,
 }
 
 impl Default for Shard {
@@ -48,6 +49,7 @@ impl Default for Shard {
             text_editor: None,
             settings: None,
             config: Config::load(),
+            add_menu_open: false,
         }
     }
 }
@@ -339,8 +341,10 @@ impl Shard {
             Message::FocusColorInput => operation::focus(COLOR_INPUT_ID),
 
             Message::EscapePressed => {
-                // Priority: close modals > clear filter > deselect
-                if self.settings.is_some() {
+                // Priority: close modals/menus > clear filter > deselect
+                if self.add_menu_open {
+                    self.add_menu_open = false;
+                } else if self.settings.is_some() {
                     self.settings = None;
                 } else if self.color_picker.is_some() {
                     self.color_picker = None;
@@ -370,6 +374,7 @@ impl Shard {
 
             // === Color Picker Messages ===
             Message::OpenColorPicker(id) => {
+                self.add_menu_open = false;
                 self.color_picker = Some(if let Some(snippet_id) = id {
                     // Edit existing color
                     if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
@@ -518,6 +523,7 @@ impl Shard {
 
             // === Code Editor Messages ===
             Message::OpenCodeEditor(id) => {
+                self.add_menu_open = false;
                 self.code_editor = Some(if let Some(snippet_id) = id {
                     if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
                         CodeEditorState::from_snippet(snippet)
@@ -580,6 +586,7 @@ impl Shard {
 
             // === Text Editor Messages ===
             Message::OpenTextEditor(id) => {
+                self.add_menu_open = false;
                 self.text_editor = Some(if let Some(snippet_id) = id {
                     if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
                         TextEditorState::from_snippet(snippet)
@@ -676,6 +683,17 @@ impl Shard {
                         self.status_message = Some(format!("Failed to save settings: {}", e));
                     }
                 }
+                Task::none()
+            }
+
+            // === Add Menu Messages ===
+            Message::ToggleAddMenu => {
+                self.add_menu_open = !self.add_menu_open;
+                Task::none()
+            }
+
+            Message::CloseAddMenu => {
+                self.add_menu_open = false;
                 Task::none()
             }
         }

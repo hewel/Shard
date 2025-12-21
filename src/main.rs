@@ -47,6 +47,7 @@ impl Shard {
             code_editor: self.code_editor.as_ref(),
             text_editor: self.text_editor.as_ref(),
             settings: self.settings.as_ref(),
+            add_menu_open: self.add_menu_open,
         })
     }
 

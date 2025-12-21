@@ -276,3 +276,36 @@ pub fn button_group_inner_style(_theme: &Theme, status: button::Status) -> butto
         ..button::Style::default()
     }
 }
+
+/// Dropdown menu container style.
+pub fn dropdown_menu_style(_theme: &Theme) -> container::Style {
+    container::Style::default()
+        .background(BG_SURFACE)
+        .border(Border {
+            color: BORDER_SUBTLE,
+            width: 1.0,
+            radius: RADIUS_MD.into(),
+        })
+}
+
+/// Dropdown menu item button style.
+pub fn dropdown_item_style(_theme: &Theme, status: button::Status) -> button::Style {
+    // Use parallel inner radius for menu items inside dropdown container
+    // Container uses RADIUS_MD (8.0) with SPACE_XS (4.0) padding
+    let inner_radius = parallel_inner_radius(RADIUS_MD, SPACE_XS);
+
+    let bg = match status {
+        button::Status::Hovered | button::Status::Pressed => BG_ELEVATED,
+        _ => Color::TRANSPARENT,
+    };
+    button::Style {
+        background: Some(bg.into()),
+        text_color: TEXT_PRIMARY,
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 0.0,
+            radius: inner_radius.into(),
+        },
+        ..button::Style::default()
+    }
+}
