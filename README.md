@@ -16,7 +16,7 @@ A lightweight desktop application for managing colors, code snippets, and text s
 
 ### Prerequisites
 
-- Rust 1.70+ (2021 edition)
+- Rust 1.92.0+
 - Cargo package manager
 
 ### Build from Source
@@ -106,7 +106,7 @@ Shard follows the Elm architecture pattern:
 
 ## License
 
-[Add license information here]
+MIT License - see [LICENSE-MIT](LICENSE-MIT) for details.
 
 ## Contributing
 
