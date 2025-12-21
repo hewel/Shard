@@ -495,9 +495,9 @@ pub fn add_or_move_color(r: u8, g: u8, b: u8, a: f32, label: String) -> Result<S
         // Return the existing snippet
         get_snippet_by_id(existing_id)?.ok_or_else(|| "Snippet not found".to_string())
     } else {
-        // Insert new color
+        // Insert new color (Snippet::color handles empty label with nanoid)
         let label = if label.is_empty() {
-            ColorData::new(r, g, b, a).to_hex()
+            nanoid::nanoid!(8)
         } else {
             label
         };

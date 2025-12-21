@@ -5,6 +5,8 @@
 //! - **Code**: Code snippets with syntax highlighting
 //! - **Text**: Plain text notes
 
+use nanoid::nanoid;
+
 mod code;
 mod color;
 mod text;
@@ -133,7 +135,7 @@ impl Snippet {
     pub fn color(r: u8, g: u8, b: u8, a: f32, label: String) -> Self {
         let color_data = ColorData::new(r, g, b, a);
         let label = if label.is_empty() {
-            color_data.to_hex()
+            nanoid!(8)
         } else {
             label
         };
@@ -143,13 +145,7 @@ impl Snippet {
     /// Create a new code snippet.
     pub fn code(code: String, language: String, label: String) -> Self {
         let label = if label.is_empty() {
-            // Use first non-empty line as label
-            code.lines()
-                .find(|l| !l.trim().is_empty())
-                .unwrap_or("Code snippet")
-                .chars()
-                .take(30)
-                .collect()
+            nanoid!(8)
         } else {
             label
         };
@@ -159,13 +155,7 @@ impl Snippet {
     /// Create a new text snippet.
     pub fn text(text: String, label: String) -> Self {
         let label = if label.is_empty() {
-            // Use first non-empty line as label
-            text.lines()
-                .find(|l| !l.trim().is_empty())
-                .unwrap_or("Text snippet")
-                .chars()
-                .take(30)
-                .collect()
+            nanoid!(8)
         } else {
             label
         };
@@ -174,25 +164,7 @@ impl Snippet {
 
     /// Get the default label for this snippet based on content.
     pub fn default_label(&self) -> String {
-        match &self.content {
-            SnippetContent::Color(c) => c.to_hex(),
-            SnippetContent::Code(c) => c
-                .code
-                .lines()
-                .find(|l| !l.trim().is_empty())
-                .unwrap_or("Code snippet")
-                .chars()
-                .take(30)
-                .collect(),
-            SnippetContent::Text(t) => t
-                .text
-                .lines()
-                .find(|l| !l.trim().is_empty())
-                .unwrap_or("Text snippet")
-                .chars()
-                .take(30)
-                .collect(),
-        }
+        nanoid!(8)
     }
 
     /// Check if this snippet matches a filter string.
