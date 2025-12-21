@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced", branch = "master", features = ["tokio", "advanced", "canvas"] }
+iced = { git = "https://github.com/iced-rs/iced", branch = "master", features = [
+  "tokio",
+  "advanced",
+  "canvas",
+] }
 regex = "1.10"
 arboard = "3.4"
 tokio = { version = "1.36", features = ["full"] }
@@ -12,3 +16,11 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 directories = "5.0"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
+
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+opt-level = "s"

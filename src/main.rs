@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 //! Shard - Snippet Manager
 //!
 //! A desktop application for managing colors, code snippets, and text snippets.
