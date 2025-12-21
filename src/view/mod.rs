@@ -17,8 +17,7 @@ pub use text_card::view_text_card;
 pub use text_editor::TextEditorState;
 
 use iced::widget::{
-    button, checkbox, column, container, mouse_area, opaque, row, scrollable, stack, text,
-    text_input, Id,
+    button, checkbox, column, container, mouse_area, row, scrollable, stack, text, text_input, Id,
 };
 use iced::{Element, Length};
 
@@ -336,27 +335,14 @@ fn view_add_menu_dropdown() -> Element<'static, Message> {
     .width(Length::Fixed(140.0))
     .style(dropdown_menu_style);
 
-    // Position the menu in the top-right area (below the add button)
-    // We use a column with a spacer to push content down, and a row with spacer to push right
-    let positioned_menu = column![
-        // Vertical offset from top (header height approx)
-        container(text("")).height(Length::Fixed(52.0)),
-        row![
-            // Horizontal spacer to push menu to the right
-            container(text("")).width(Length::Fill),
-            menu,
-            // Right margin to align with the add button
-            container(text("")).width(Length::Fixed(SPACE_MD)),
-        ],
-    ];
+    // Position menu at top-right using container alignment
+    let positioned_menu = container(menu)
+        .width(Length::Fill)
+        .padding(iced::Padding::new(0.0).top(52.0).right(SPACE_MD))
+        .align_x(iced::alignment::Horizontal::Right);
 
-    // Click-outside-to-close overlay
-    let overlay = mouse_area(
-        container(opaque(positioned_menu))
-            .width(Length::Fill)
-            .height(Length::Fill),
-    )
-    .on_press(Message::CloseAddMenu);
-
-    overlay.into()
+    // Click-outside-to-close overlay (transparent, minimal overhead)
+    mouse_area(positioned_menu)
+        .on_press(Message::CloseAddMenu)
+        .into()
 }
