@@ -18,7 +18,8 @@ use crate::theme::{
 use crate::widgets::{AlphaBar, ChromaLightnessBox, ColorSwatch, HueBar, SaturationLightnessBox};
 
 /// Color picker mode: HSL or OKLCH color space.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PickerMode {
     #[default]
     Hsl,
@@ -52,10 +53,10 @@ pub struct ColorPickerState {
 
 impl ColorPickerState {
     /// Create a new picker state for creating a new color.
-    pub fn new_color() -> Self {
+    pub fn new_color(default_mode: PickerMode) -> Self {
         Self {
             editing_id: None,
-            mode: PickerMode::default(),
+            mode: default_mode,
             hue: 0.0,
             saturation: 0.5,
             lightness: 0.5,
@@ -68,13 +69,13 @@ impl ColorPickerState {
     }
 
     /// Create a picker state from an existing snippet.
-    pub fn from_snippet(snippet: &Snippet) -> Self {
+    pub fn from_snippet(snippet: &Snippet, default_mode: PickerMode) -> Self {
         if let SnippetContent::Color(color) = &snippet.content {
             let (h, s, l) = rgb_to_hsl(color.r, color.g, color.b);
             let (ok_l, ok_c, ok_h) = rgb_to_oklch(color.r, color.g, color.b);
             Self {
                 editing_id: Some(snippet.id),
-                mode: PickerMode::default(),
+                mode: default_mode,
                 hue: h,
                 saturation: s,
                 lightness: l,
@@ -85,7 +86,7 @@ impl ColorPickerState {
                 label: snippet.label.clone(),
             }
         } else {
-            Self::new_color()
+            Self::new_color(default_mode)
         }
     }
 

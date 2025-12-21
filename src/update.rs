@@ -428,15 +428,16 @@ impl Shard {
             // === Color Picker Messages ===
             Message::OpenColorPicker(id) => {
                 self.add_menu_open = false;
+                let default_mode = self.config.default_picker_mode;
                 self.color_picker = Some(if let Some(snippet_id) = id {
                     // Edit existing color
                     if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
-                        ColorPickerState::from_snippet(snippet)
+                        ColorPickerState::from_snippet(snippet, default_mode)
                     } else {
-                        ColorPickerState::new_color()
+                        ColorPickerState::new_color(default_mode)
                     }
                 } else {
-                    ColorPickerState::new_color()
+                    ColorPickerState::new_color(default_mode)
                 });
                 Task::none()
             }
@@ -713,6 +714,13 @@ impl Shard {
             Message::SettingsCustomCommandChanged(cmd) => {
                 if let Some(settings) = &mut self.settings {
                     settings.custom_command = cmd;
+                }
+                Task::none()
+            }
+
+            Message::SettingsDefaultPickerModeChanged(mode) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.default_picker_mode = mode;
                 }
                 Task::none()
             }

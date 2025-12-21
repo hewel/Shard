@@ -87,6 +87,7 @@ pub enum Message {
     CloseSettings,
     SettingsEditorPresetChanged(EditorPreset),
     SettingsCustomCommandChanged(String),
+    SettingsDefaultPickerModeChanged(PickerMode),
     ConfirmSettings,
     ConfigSaved(Result<(), String>),
 

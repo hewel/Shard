@@ -8,6 +8,8 @@ use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 
+use crate::view::PickerMode;
+
 // === Keyboard Shortcuts ===
 
 /// Modifier keys for a shortcut.
@@ -292,6 +294,10 @@ pub struct Config {
     /// Keyboard shortcuts.
     #[serde(default)]
     pub keyboard: KeyboardConfig,
+
+    /// Default color picker mode (HSL or OKLCH).
+    #[serde(default)]
+    pub default_picker_mode: PickerMode,
 }
 
 impl Config {

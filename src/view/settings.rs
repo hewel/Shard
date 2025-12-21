@@ -11,6 +11,7 @@ use crate::theme::{
     secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
     TEXT_PRIMARY, TEXT_SECONDARY,
 };
+use crate::view::PickerMode;
 
 /// State for the settings modal.
 #[derive(Debug, Clone)]
@@ -23,6 +24,8 @@ pub struct SettingsState {
     pub keyboard: KeyboardConfig,
     /// Which shortcut action is currently being recorded (if any).
     pub recording_action: Option<ShortcutAction>,
+    /// Default color picker mode.
+    pub default_picker_mode: PickerMode,
 }
 
 impl SettingsState {
@@ -33,6 +36,7 @@ impl SettingsState {
             custom_command: config.editor.custom_command.clone(),
             keyboard: config.keyboard.clone(),
             recording_action: None,
+            default_picker_mode: config.default_picker_mode,
         }
     }
 
@@ -41,6 +45,7 @@ impl SettingsState {
         config.editor.preset = self.editor_preset;
         config.editor.custom_command = self.custom_command.clone();
         config.keyboard = self.keyboard.clone();
+        config.default_picker_mode = self.default_picker_mode;
     }
 }
 
@@ -183,6 +188,33 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
             container(text("")).into()
         };
 
+    // Color Picker section
+    let picker_section_title = text("Color Picker").size(14).color(TEXT_SECONDARY);
+
+    let picker_mode_buttons = row![
+        button(text("HSL").size(12))
+            .on_press(Message::SettingsDefaultPickerModeChanged(PickerMode::Hsl))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(if settings.default_picker_mode == PickerMode::Hsl {
+                primary_button_style
+            } else {
+                secondary_button_style
+            }),
+        button(text("OKLCH").size(12))
+            .on_press(Message::SettingsDefaultPickerModeChanged(PickerMode::Oklch))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(if settings.default_picker_mode == PickerMode::Oklch {
+                primary_button_style
+            } else {
+                secondary_button_style
+            }),
+    ]
+    .spacing(SPACE_XS);
+
+    let picker_hint = text("Default color space when opening the color picker")
+        .size(11)
+        .color(TEXT_MUTED);
+
     // Data section - Export/Import
     let data_section_title = text("Data").size(14).color(TEXT_SECONDARY);
 
@@ -237,6 +269,10 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
         preset_row,
         command_preview,
         custom_command_section,
+        iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
+        picker_section_title,
+        picker_mode_buttons,
+        picker_hint,
         iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
         keyboard_section_title,
         keyboard_section,
