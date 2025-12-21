@@ -2,7 +2,7 @@
 
 use iced::highlighter;
 use iced::widget::{button, column, container, mouse_area, opaque, row, text, text_editor, text_input};
-use iced::{Element, Font, Length};
+use iced::{Element, Length};
 
 use crate::icons;
 use crate::message::Message;
@@ -101,8 +101,7 @@ pub fn view_code_editor_modal(editor: &CodeEditorState) -> Element<'_, Message> 
         .on_action(Message::CodeEditorContentChanged)
         .height(Length::Fixed(300.0))
         .padding(SPACE_SM)
-        .font(Font::MONOSPACE)
-        .highlight(extension, highlighter::Theme::SolarizedDark);
+        .highlight(extension, highlighter::Theme::Base16Mocha);
 
     // Editor status bar (line:column, line count)
     let cursor = editor.content.cursor();
