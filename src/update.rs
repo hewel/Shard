@@ -705,9 +705,26 @@ async fn copy_to_clipboard(text: &str) -> Result<String, String> {
     match arboard::Clipboard::new() {
         Ok(mut clipboard) => {
             clipboard.set_text(&text).map_err(|e| e.to_string())?;
-            Ok(format!("Copied: {}", text))
+            // Truncate display text for status bar (max 40 chars)
+            let display = truncate_for_status(&text, 40);
+            Ok(format!("Copied: {}", display))
         }
         Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Truncate text for status bar display.
+fn truncate_for_status(text: &str, max_len: usize) -> String {
+    // Take first line only
+    let first_line = text.lines().next().unwrap_or(text);
+    let trimmed = first_line.trim();
+
+    if trimmed.chars().count() <= max_len {
+        trimmed.to_string()
+    } else {
+        // Truncate with ellipsis
+        let truncated: String = trimmed.chars().take(max_len - 1).collect();
+        format!("{}…", truncated.trim_end())
     }
 }
 
