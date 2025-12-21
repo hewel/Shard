@@ -241,3 +241,38 @@ pub fn modal_dialog_style(_theme: &Theme) -> container::Style {
             radius: RADIUS_XL.into(),
         })
 }
+
+/// Button group container style with rounded corners.
+/// Use `button_group_inner_style` for buttons inside this container.
+pub fn button_group_style(_theme: &Theme) -> container::Style {
+    container::Style::default()
+        .background(BG_ELEVATED)
+        .border(Border {
+            color: BORDER_SUBTLE,
+            width: 1.0,
+            radius: RADIUS_MD.into(),
+        })
+}
+
+/// Button style for buttons inside a button group container.
+/// Uses parallel inner radius to maintain visual alignment with the container.
+pub fn button_group_inner_style(_theme: &Theme, status: button::Status) -> button::Style {
+    // Outer container uses RADIUS_MD (8.0) with SPACE_XS (4.0) padding
+    // Inner radius = max(0, 8 - 4) = 4.0
+    let inner_radius = parallel_inner_radius(RADIUS_MD, SPACE_XS);
+
+    let bg = match status {
+        button::Status::Hovered | button::Status::Pressed => ACCENT_HOVER,
+        _ => ACCENT,
+    };
+    button::Style {
+        background: Some(bg.into()),
+        text_color: Color::WHITE,
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 0.0,
+            radius: inner_radius.into(),
+        },
+        ..button::Style::default()
+    }
+}

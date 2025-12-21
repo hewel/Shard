@@ -25,8 +25,8 @@ use crate::icons;
 use crate::message::Message;
 use crate::snippet::{Snippet, SnippetContent, SnippetKind};
 use crate::theme::{
-    header_style, input_style, primary_button_style, secondary_button_style, status_bar_style,
-    subtle_button_style, BG_BASE, BG_ELEVATED, BORDER_SUBTLE, RADIUS_SM, SPACE_LG, SPACE_MD,
+    button_group_inner_style, button_group_style, header_style, input_style, primary_button_style,
+    secondary_button_style, status_bar_style, subtle_button_style, BG_BASE, SPACE_LG, SPACE_MD,
     SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
 
@@ -85,7 +85,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     )
     .on_press(Message::OpenColorPicker(None))
     .padding([SPACE_XS, SPACE_SM])
-    .style(primary_button_style);
+    .style(button_group_inner_style);
 
     let add_code_button = button(
         row![icons::code().size(14), text("Code").size(13)]
@@ -94,7 +94,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     )
     .on_press(Message::OpenCodeEditor(None))
     .padding([SPACE_XS, SPACE_SM])
-    .style(primary_button_style);
+    .style(button_group_inner_style);
 
     let add_text_button = button(
         row![icons::text_icon().size(14), text("Text").size(13)]
@@ -103,22 +103,14 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     )
     .on_press(Message::OpenTextEditor(None))
     .padding([SPACE_XS, SPACE_SM])
-    .style(primary_button_style);
+    .style(button_group_inner_style);
 
-    // Button group container
+    // Button group container with parallel corner styling
     let add_buttons_group = container(
         row![add_color_button, add_code_button, add_text_button].spacing(SPACE_XS),
     )
     .padding([SPACE_XS, SPACE_XS])
-    .style(|_theme| {
-        iced::widget::container::Style::default()
-            .background(BG_ELEVATED)
-            .border(iced::Border {
-                color: BORDER_SUBTLE,
-                width: 1.0,
-                radius: RADIUS_SM.into(),
-            })
-    });
+    .style(button_group_style);
 
     let header_row_1 = row![color_input_widget, add_buttons_group]
         .spacing(SPACE_MD)
