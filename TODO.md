@@ -132,9 +132,9 @@ The app manages three types of snippets: Colors, Code, and Text.
     - [ ] Drag snippets to reorder
     - [ ] Visual feedback during drag
     - [ ] Persist order to database
-- [ ] **Syntax Highlighting**
-    - [ ] Highlight code in editor and preview
-    - [ ] Language-specific colors
+- [x] **Syntax Highlighting**
+    - [x] Highlight code in editor (using iced's built-in highlighter)
+    - [x] Language-specific colors (Base16Mocha theme)
 
 ### Export/Import
 - [ ] Export snippets as JSON
