@@ -43,6 +43,7 @@ pub enum Message {
 
     // === Keyboard Shortcuts ===
     PasteFromClipboard,
+    PasteContentReceived(Option<String>),
     FocusColorInput,
     EscapePressed,
     DeleteSelectedSnippet,

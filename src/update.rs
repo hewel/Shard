@@ -329,14 +329,51 @@ impl Shard {
                         Err(_) => None,
                     }
                 },
-                |content| {
-                    if let Some(text) = content {
-                        Message::ColorInputChanged(text)
-                    } else {
-                        Message::ColorInputChanged(String::new())
-                    }
-                },
+                Message::PasteContentReceived,
             ),
+
+            Message::PasteContentReceived(content) => {
+                if let Some(text) = content {
+                    if !text.is_empty() {
+                        // Detect snippet type and add accordingly
+                        if let Some(kind) = detect_snippet_type(&text) {
+                            match kind {
+                                SnippetKind::Color => {
+                                    let colors = extract_colors_from_text(&text);
+                                    if let Some(color) = colors.into_iter().next() {
+                                        let label = color.to_hex();
+                                        return Task::perform(
+                                            async move {
+                                                db::add_or_move_color(
+                                                    color.r, color.g, color.b, color.a, label,
+                                                )
+                                            },
+                                            Message::SnippetAdded,
+                                        );
+                                    }
+                                }
+                                SnippetKind::Code => {
+                                    let code = text.clone();
+                                    return Task::perform(
+                                        async move {
+                                            db::add_code_snippet(code, String::new(), String::new())
+                                        },
+                                        Message::SnippetAdded,
+                                    );
+                                }
+                                SnippetKind::Text => {
+                                    let text_content = text.clone();
+                                    return Task::perform(
+                                        async move { db::add_text_snippet(text_content, String::new()) },
+                                        Message::SnippetAdded,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+                Task::none()
+            }
 
             Message::FocusColorInput => operation::focus(COLOR_INPUT_ID),
 
