@@ -5,6 +5,7 @@
 - **Test**: `cargo test` (Single: `cargo test <test_name>`)
 - **Lint**: `cargo clippy -- -D warnings`
 - **Format**: `cargo fmt --all`
+- **Install dependencies**: `cargo add <crate>`
 
 ## Code Standards
 
