@@ -137,7 +137,7 @@ The app manages three types of snippets: Colors, Code, and Text.
     - [x] Language-specific colors (Base16Mocha theme)
 
 ### Export/Import
-- [ ] Export snippets as JSON
+- [x] Export snippets as JSON
 - [ ] Export colors as CSS/SCSS variables
 - [ ] Import snippets from file
 - [ ] Import colors from image

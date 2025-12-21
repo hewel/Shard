@@ -6,6 +6,7 @@
 //! - **Text**: Plain text notes
 
 use nanoid::nanoid;
+use serde::Serialize;
 
 mod code;
 mod color;
@@ -18,7 +19,8 @@ pub use color::{
 pub use text::TextData;
 
 /// The type of snippet.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SnippetKind {
     Color,
     Code,
@@ -56,7 +58,8 @@ impl SnippetKind {
 }
 
 /// Content varies by snippet type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum SnippetContent {
     Color(ColorData),
     Code(CodeData),
@@ -107,11 +110,12 @@ impl SnippetContent {
 }
 
 /// A unified snippet that can hold different content types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Snippet {
     pub id: i64,
     pub label: String,
     pub content: SnippetContent,
+    #[serde(skip)]
     pub position: i64,
 }
 

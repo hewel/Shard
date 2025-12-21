@@ -89,6 +89,10 @@ pub enum Message {
     ConfirmSettings,
     ConfigSaved(Result<(), String>),
 
+    // === Export/Import ===
+    ExportSnippetsJson,
+    ExportFinished(Result<String, String>),
+
     // === Add Menu Dropdown ===
     ToggleAddMenu,
     CloseAddMenu,

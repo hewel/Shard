@@ -734,6 +734,23 @@ impl Shard {
                 self.add_menu_open = false;
                 Task::none()
             }
+
+            // === Export/Import Messages ===
+            Message::ExportSnippetsJson => {
+                let snippets = self.snippets.clone();
+                Task::perform(
+                    async move { export_snippets_json(snippets).await },
+                    Message::ExportFinished,
+                )
+            }
+
+            Message::ExportFinished(result) => {
+                match result {
+                    Ok(msg) => self.status_message = Some(msg),
+                    Err(e) => self.status_message = Some(format!("Export failed: {}", e)),
+                }
+                Task::none()
+            }
         }
     }
 
@@ -834,4 +851,29 @@ async fn open_in_external_editor(
     let _ = fs::remove_file(&temp_path);
 
     Ok((id, new_content, is_code))
+}
+
+/// Export all snippets to a JSON file.
+async fn export_snippets_json(
+    snippets: Vec<crate::snippet::Snippet>,
+) -> Result<String, String> {
+    use std::fs;
+
+    let json = serde_json::to_string_pretty(&snippets)
+        .map_err(|e| format!("Serialization failed: {}", e))?;
+
+    // Get documents directory or fall back to temp
+    let export_dir = directories::UserDirs::new()
+        .and_then(|d| d.document_dir().map(|p| p.to_path_buf()))
+        .unwrap_or_else(std::env::temp_dir);
+
+    let path = export_dir.join("shard_export.json");
+
+    fs::write(&path, &json).map_err(|e| format!("Write failed: {}", e))?;
+
+    Ok(format!(
+        "Exported {} snippets to {}",
+        snippets.len(),
+        path.display()
+    ))
 }

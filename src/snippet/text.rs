@@ -1,7 +1,9 @@
 //! Text snippet data.
 
+use serde::Serialize;
+
 /// Plain text data.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TextData {
     pub text: String,
 }

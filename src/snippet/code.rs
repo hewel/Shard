@@ -1,10 +1,11 @@
 //! Code snippet data and language detection.
 
 use regex::Regex;
+use serde::Serialize;
 use std::sync::LazyLock;
 
 /// Code data with content and language.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CodeData {
     pub code: String,
     pub language: String,

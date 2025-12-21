@@ -2970,6 +2970,7 @@ dependencies = [
  "regex",
  "rusqlite",
  "serde",
+ "serde_json",
  "tokio",
  "toml",
 ]
