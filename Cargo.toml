@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced", branch = "master", features = [
+iced = { version = "0.14", features = [
   "tokio",
   "advanced",
   "canvas",
+  "highlighter",
 ] }
 regex = "1.12"
 arboard = "3.6"

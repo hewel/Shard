@@ -142,6 +142,35 @@ pub fn detect_language(code: &str) -> String {
     "plain".to_string()
 }
 
+/// Map language name to file extension for syntax highlighting.
+pub fn language_to_extension(language: &str) -> &'static str {
+    match language.to_lowercase().as_str() {
+        "rust" => "rs",
+        "python" => "py",
+        "javascript" => "js",
+        "typescript" => "ts",
+        "json" => "json",
+        "html" => "html",
+        "css" => "css",
+        "sql" => "sql",
+        "shell" | "bash" | "sh" => "sh",
+        "go" => "go",
+        "c" => "c",
+        "cpp" | "c++" => "cpp",
+        "java" => "java",
+        "ruby" => "rb",
+        "php" => "php",
+        "swift" => "swift",
+        "kotlin" => "kt",
+        "scala" => "scala",
+        "yaml" | "yml" => "yaml",
+        "toml" => "toml",
+        "markdown" | "md" => "md",
+        "xml" => "xml",
+        _ => "txt",
+    }
+}
+
 /// Check if text looks like code (heuristics).
 pub fn looks_like_code(text: &str) -> bool {
     let trimmed = text.trim();

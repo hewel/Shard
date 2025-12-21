@@ -7,7 +7,8 @@ use crate::config::Config;
 use crate::db;
 use crate::message::Message;
 use crate::snippet::{
-    detect_snippet_type, extract_colors_from_text, ColorData, Snippet, SnippetContent, SnippetKind,
+    detect_snippet_type, extract_colors_from_text, language_to_extension, ColorData, Snippet,
+    SnippetContent, SnippetKind,
 };
 use crate::view::{
     CodeEditorState, ColorPickerState, PickerMode, SettingsState, TextEditorState, COLOR_INPUT_ID,
@@ -780,35 +781,6 @@ fn truncate_for_status(text: &str, max_len: usize) -> String {
         // Truncate with ellipsis
         let truncated: String = trimmed.chars().take(max_len - 1).collect();
         format!("{}…", truncated.trim_end())
-    }
-}
-
-/// Map language name to file extension.
-fn language_to_extension(language: &str) -> &'static str {
-    match language.to_lowercase().as_str() {
-        "rust" => "rs",
-        "python" => "py",
-        "javascript" => "js",
-        "typescript" => "ts",
-        "json" => "json",
-        "html" => "html",
-        "css" => "css",
-        "sql" => "sql",
-        "shell" | "bash" | "sh" => "sh",
-        "go" => "go",
-        "c" => "c",
-        "cpp" | "c++" => "cpp",
-        "java" => "java",
-        "ruby" => "rb",
-        "php" => "php",
-        "swift" => "swift",
-        "kotlin" => "kt",
-        "scala" => "scala",
-        "yaml" | "yml" => "yaml",
-        "toml" => "toml",
-        "markdown" | "md" => "md",
-        "xml" => "xml",
-        _ => "txt",
     }
 }
 

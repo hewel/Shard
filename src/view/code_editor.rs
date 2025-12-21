@@ -1,5 +1,6 @@
 //! Code editor modal for editing code snippets.
 
+use iced::highlighter;
 use iced::widget::{
     button, column, container, mouse_area, opaque, row, text, text_editor, text_input,
 };
@@ -7,7 +8,7 @@ use iced::{Element, Length};
 
 use crate::icons;
 use crate::message::Message;
-use crate::snippet::{detect_language, Snippet, SnippetContent};
+use crate::snippet::{detect_language, language_to_extension, Snippet, SnippetContent};
 use crate::theme::{
     input_style, modal_dialog_style, modal_overlay_style, primary_button_style,
     secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_PRIMARY,
@@ -96,11 +97,13 @@ pub fn view_code_editor_modal(editor: &CodeEditorState) -> Element<'_, Message> 
     .spacing(SPACE_XS)
     .align_y(iced::Alignment::Center);
 
-    // Code editor
+    // Code editor with syntax highlighting
+    let extension = language_to_extension(&editor.language);
     let code_editor = text_editor(&editor.content)
         .on_action(Message::CodeEditorContentChanged)
         .height(Length::Fixed(300.0))
-        .padding(SPACE_SM);
+        .padding(SPACE_SM)
+        .highlight(extension, highlighter::Theme::SolarizedDark);
 
     // Language input
     let language_input = row![

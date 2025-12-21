@@ -11,7 +11,7 @@ mod code;
 mod color;
 mod text;
 
-pub use code::{detect_language, CodeData};
+pub use code::{detect_language, language_to_extension, CodeData};
 pub use color::{
     extract_colors_from_text, hsl_to_rgb, oklch_to_rgb, rgb_to_hsl, rgb_to_oklch, ColorData,
 };
