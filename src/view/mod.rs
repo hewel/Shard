@@ -26,8 +26,8 @@ use crate::message::Message;
 use crate::snippet::{Snippet, SnippetContent, SnippetKind};
 use crate::theme::{
     dropdown_item_style, dropdown_menu_style, header_style, input_style, primary_button_style,
-    secondary_button_style, status_bar_style, subtle_button_style, BG_BASE, SPACE_LG, SPACE_MD,
-    SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
+    scrollbar_style, secondary_button_style, status_bar_style, subtle_button_style, BG_BASE,
+    SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
 
 /// Input field ID for keyboard focus.
@@ -224,6 +224,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
 
         scrollable(column(items).spacing(SPACE_SM).padding(SPACE_MD))
             .height(Length::Fill)
+            .style(scrollbar_style)
             .into()
     };
 

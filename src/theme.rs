@@ -2,7 +2,7 @@
 
 #![allow(dead_code)]
 
-use iced::widget::{button, container, text_input};
+use iced::widget::{button, container, scrollable, text_input};
 use iced::{Border, Color, Theme};
 
 // === Color Palette ===
@@ -308,4 +308,38 @@ pub fn dropdown_item_style(_theme: &Theme, status: button::Status) -> button::St
         },
         ..button::Style::default()
     }
+}
+
+/// Scrollbar style matching the dark theme.
+pub fn scrollbar_style(theme: &Theme, status: scrollable::Status) -> scrollable::Style {
+    // Start from default and customize
+    let mut style = scrollable::default(theme, status);
+
+    // Scroller (thumb) colors - brighter when hovered
+    let scroller_color = match status {
+        scrollable::Status::Active { .. } => BG_ELEVATED,
+        scrollable::Status::Hovered { .. } | scrollable::Status::Dragged { .. } => BORDER_SUBTLE,
+    };
+
+    let rail = scrollable::Rail {
+        background: Some(Color::TRANSPARENT.into()),
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 0.0,
+            radius: RADIUS_SM.into(),
+        },
+        scroller: scrollable::Scroller {
+            background: scroller_color.into(),
+            border: Border {
+                color: Color::TRANSPARENT,
+                width: 0.0,
+                radius: RADIUS_SM.into(),
+            },
+        },
+    };
+
+    style.vertical_rail = rail;
+    style.horizontal_rail = rail;
+    style.gap = None;
+    style
 }
