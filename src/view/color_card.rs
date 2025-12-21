@@ -7,7 +7,8 @@ use crate::icons;
 use crate::message::Message;
 use crate::snippet::ColorData;
 use crate::theme::{
-    SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY, card_style, danger_button_style, subtle_button_style
+    card_style, danger_button_style, subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM,
+    SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
 use crate::widgets::ColorSwatch;
 
@@ -18,17 +19,24 @@ pub fn view_color_card<'a>(
     color: &'a ColorData,
     is_selected: bool,
 ) -> Element<'a, Message> {
-    // Color swatch (72x72)
-    let swatch = Canvas::new(ColorSwatch {
-        color: color.to_iced_color(),
-    })
-    .width(72)
-    .height(72);
+    // Color swatch (64x64)
+    let swatch = container(
+        Canvas::new(ColorSwatch {
+            color: color.to_iced_color(),
+        })
+        .width(48)
+        .height(48),
+    )
+    .width(64)
+    .height(64)
+    .center_x(64)
+    .center_y(64)
+    .style(|_theme| iced::widget::container::Style::default().background(BG_SURFACE));
 
     // Hex display
-    let hex_display = text(color.to_hex()).size(12).color(TEXT_MUTED);
+    let hex_display = text(color.to_hex()).size(11).color(TEXT_MUTED);
 
-    // Copy buttons
+    // Copy buttons row
     let copy_buttons = row![
         button(row![icons::copy().size(11), text("Hex").size(11)].spacing(4))
             .on_press(Message::CopyHex(id))
@@ -49,30 +57,33 @@ pub fn view_color_card<'a>(
     ]
     .spacing(SPACE_XS);
 
-    // Edit button
-    let edit_button = button(icons::pencil().size(14))
-        .on_press(Message::OpenColorPicker(Some(id)))
-        .padding([SPACE_XS, SPACE_SM])
-        .style(subtle_button_style);
-
-    // Delete button
-    let delete_button = button(icons::trash().size(14))
-        .on_press(Message::DeleteSnippet(id))
-        .padding([SPACE_XS, SPACE_SM])
-        .style(danger_button_style);
-
-    let info_column = column![text(label).size(15).color(TEXT_SECONDARY), hex_display].spacing(SPACE_XS);
-
-    let card = row![
-        swatch,
-        info_column,
+    // Info column with label, hex, and copy buttons
+    let info_column = column![
+        text(label).size(14).color(TEXT_SECONDARY),
+        hex_display,
         copy_buttons,
-        edit_button,
-        delete_button
     ]
-    .spacing(SPACE_MD)
-    .padding(SPACE_MD)
+    .spacing(SPACE_XS)
+    .width(Length::Fill);
+
+    // Action buttons (edit, delete)
+    let action_row = row![
+        button(icons::pencil().size(14))
+            .on_press(Message::OpenColorPicker(Some(id)))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
+        button(icons::trash().size(14))
+            .on_press(Message::DeleteSnippet(id))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(danger_button_style),
+    ]
+    .spacing(SPACE_XS)
     .align_y(iced::Alignment::Center);
+
+    let card = row![swatch, info_column, action_row]
+        .spacing(SPACE_MD)
+        .padding(SPACE_MD)
+        .align_y(iced::Alignment::Center);
 
     let card_container = container(card)
         .style(move |theme| card_style(theme, is_selected))

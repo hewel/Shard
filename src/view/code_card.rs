@@ -7,8 +7,8 @@ use crate::icons;
 use crate::message::Message;
 use crate::snippet::CodeData;
 use crate::theme::{
-    card_style, danger_button_style, subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM, SPACE_XS,
-    TEXT_MUTED, TEXT_SECONDARY,
+    card_style, danger_button_style, subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM,
+    SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
 
 /// Render a code snippet card.
@@ -18,73 +18,61 @@ pub fn view_code_card<'a>(
     code: &'a CodeData,
     is_selected: bool,
 ) -> Element<'a, Message> {
-    // Code icon placeholder (colored box for code)
+    // Code icon (64x64 container)
     let code_icon = container(
         text(icons::CODE_ICON)
-            .size(32)
+            .size(28)
             .font(icons::ICON_FONT)
             .color(TEXT_SECONDARY),
     )
-    .width(72)
-    .height(72)
-    .center_x(72)
-    .center_y(72)
+    .width(64)
+    .height(64)
+    .center_x(64)
+    .center_y(64)
     .style(|_theme| iced::widget::container::Style::default().background(BG_SURFACE));
 
-    // Language badge and line count
-    let language_badge = container(text(&code.language).size(11).color(TEXT_MUTED))
+    // Language badge
+    let language_badge = container(text(&code.language).size(10).color(TEXT_MUTED))
         .padding([2, 6])
         .style(|_theme| iced::widget::container::Style::default().background(BG_SURFACE));
 
-    let line_count = text(format!("{} lines", code.line_count()))
-        .size(12)
-        .color(TEXT_MUTED);
+    // Header row: label + language badge
+    let header_row = row![text(label).size(14).color(TEXT_SECONDARY), language_badge]
+        .spacing(SPACE_SM)
+        .align_y(iced::Alignment::Center);
 
     // Code preview (first 2 lines)
     let preview = code.preview(2);
-    let preview_text = text(preview)
+    let preview_text = text(preview).size(11).color(TEXT_MUTED);
+
+    // Line count
+    let line_count = text(format!("{} lines", code.line_count()))
         .size(11)
-        .color(TEXT_SECONDARY)
-        .width(Length::Fixed(300.0));
+        .color(TEXT_MUTED);
 
-    // Copy button
-    let copy_button = button(icons::copy().size(14))
-        .on_press(Message::CopySnippet(id))
-        .padding([SPACE_XS, SPACE_SM])
-        .style(subtle_button_style);
+    // Info column with header, preview, and stats
+    let info_column = column![header_row, preview_text, line_count]
+        .spacing(SPACE_XS)
+        .width(Length::Fill);
 
-    // Open in external editor button
-    let external_editor_button = button(icons::arrow_square_out().size(14))
-        .on_press(Message::OpenInExternalEditor(id, true))
-        .padding([SPACE_XS, SPACE_SM])
-        .style(subtle_button_style);
-
-    // Edit button
-    let edit_button = button(icons::pencil().size(14))
-        .on_press(Message::OpenCodeEditor(Some(id)))
-        .padding([SPACE_XS, SPACE_SM])
-        .style(subtle_button_style);
-
-    // Delete button
-    let delete_button = button(icons::trash().size(14))
-        .on_press(Message::DeleteSnippet(id))
-        .padding([SPACE_XS, SPACE_SM])
-        .style(danger_button_style);
-
-    let info_column = column![
-        row![text(label).size(15).color(TEXT_SECONDARY), language_badge]
-            .spacing(SPACE_SM)
-            .align_y(iced::Alignment::Center),
-        preview_text,
-        line_count,
-    ]
-    .spacing(SPACE_XS);
-
+    // Action buttons
     let action_row = row![
-        copy_button,
-        external_editor_button,
-        edit_button,
-        delete_button
+        button(icons::copy().size(14))
+            .on_press(Message::CopySnippet(id))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
+        button(icons::arrow_square_out().size(14))
+            .on_press(Message::OpenInExternalEditor(id, true))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
+        button(icons::pencil().size(14))
+            .on_press(Message::OpenCodeEditor(Some(id)))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
+        button(icons::trash().size(14))
+            .on_press(Message::DeleteSnippet(id))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(danger_button_style),
     ]
     .spacing(SPACE_XS)
     .align_y(iced::Alignment::Center);
