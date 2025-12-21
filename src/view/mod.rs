@@ -249,24 +249,27 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
 
     // Main layout
     let main_content = container(column![header, error_text, snippets_list, status_bar])
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
 
-    // Stack modals/menus on top
-    if let Some(s) = settings {
-        stack![main_content, settings::view_settings_modal(s)].into()
+    // Build overlay layer (always present to maintain consistent widget tree)
+    let overlay: Element<'_, Message> = if let Some(s) = settings {
+        settings::view_settings_modal(s)
     } else if let Some(picker) = color_picker {
-        stack![main_content, view_color_picker_modal(picker)].into()
+        view_color_picker_modal(picker)
     } else if let Some(editor) = code_editor {
-        stack![main_content, code_editor::view_code_editor_modal(editor)].into()
+        code_editor::view_code_editor_modal(editor)
     } else if let Some(editor) = text_editor {
-        stack![main_content, text_editor::view_text_editor_modal(editor)].into()
+        text_editor::view_text_editor_modal(editor)
     } else if add_menu_open {
-        stack![main_content, view_add_menu_dropdown()].into()
+        view_add_menu_dropdown()
     } else {
-        main_content.into()
-    }
+        // Empty overlay - preserves widget tree structure
+        container(text("")).width(0).height(0).into()
+    };
+
+    stack![main_content, overlay].into()
 }
 
 /// Render a tab filter button.
