@@ -9,9 +9,9 @@ iced = { git = "https://github.com/iced-rs/iced", branch = "master", features = 
   "advanced",
   "canvas",
 ] }
-regex = "1.10"
-arboard = "3.4"
-tokio = { version = "1.36", features = ["full"] }
+regex = "1.12"
+arboard = "3.6"
+tokio = { version = "1.48", features = ["full"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 directories = "5.0"
 serde = { version = "1.0", features = ["derive"] }
