@@ -1,18 +1,16 @@
 //! Code editor modal for editing code snippets.
 
 use iced::highlighter;
-use iced::widget::{
-    button, column, container, mouse_area, opaque, row, text, text_editor, text_input,
-};
-use iced::{Element, Length};
+use iced::widget::{button, column, container, mouse_area, opaque, row, text, text_editor, text_input};
+use iced::{Element, Font, Length};
 
 use crate::icons;
 use crate::message::Message;
 use crate::snippet::{detect_language, language_to_extension, Snippet, SnippetContent};
 use crate::theme::{
     input_style, modal_dialog_style, modal_overlay_style, primary_button_style,
-    secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_PRIMARY,
-    TEXT_SECONDARY,
+    secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
+    TEXT_PRIMARY, TEXT_SECONDARY,
 };
 
 /// State for the code editor modal.
@@ -99,11 +97,23 @@ pub fn view_code_editor_modal(editor: &CodeEditorState) -> Element<'_, Message> 
 
     // Code editor with syntax highlighting
     let extension = language_to_extension(&editor.language);
-    let code_editor = text_editor(&editor.content)
+    let code_text_editor = text_editor(&editor.content)
         .on_action(Message::CodeEditorContentChanged)
         .height(Length::Fixed(300.0))
         .padding(SPACE_SM)
+        .font(Font::MONOSPACE)
         .highlight(extension, highlighter::Theme::SolarizedDark);
+
+    // Editor status bar (line:column, line count)
+    let cursor = editor.content.cursor();
+    let line_count = editor.content.line_count();
+    let status_text = format!(
+        "Ln {}, Col {}  •  {} lines",
+        cursor.position.line + 1,
+        cursor.position.column + 1,
+        line_count
+    );
+    let editor_status = text(status_text).size(11).color(TEXT_MUTED);
 
     // Language input
     let language_input = row![
@@ -152,14 +162,15 @@ pub fn view_code_editor_modal(editor: &CodeEditorState) -> Element<'_, Message> 
     // Modal content
     let modal_content = column![
         header_row,
-        code_editor,
+        code_text_editor,
+        editor_status,
         language_input,
         label_input,
         action_buttons,
     ]
-    .spacing(SPACE_MD)
+    .spacing(SPACE_SM)
     .padding(SPACE_MD)
-    .width(Length::Fixed(500.0));
+    .width(Length::Fixed(550.0));
 
     let modal_dialog = container(modal_content).style(modal_dialog_style);
 
