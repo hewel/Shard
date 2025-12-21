@@ -124,10 +124,10 @@ The app manages three types of snippets: Colors, Code, and Text.
 ## Future Improvements
 
 ### UI Enhancements
-- [ ] **Palettes/Categories**
-    - [ ] Create/rename/delete palettes
-    - [ ] Snippets can belong to multiple palettes
-    - [ ] Filter by palette
+- [x] **Palettes/Categories**
+    - [x] Create/rename/delete palettes
+    - [x] Snippets can belong to multiple palettes
+    - [x] Filter by palette
 - [ ] **Drag-and-Drop Reordering**
     - [ ] Drag snippets to reorder
     - [ ] Visual feedback during drag

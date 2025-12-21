@@ -4,7 +4,7 @@ use iced::widget::operation;
 use iced::Task;
 
 use crate::config::{Config, KeyboardConfig};
-use crate::db;
+use crate::db::{self, Palette};
 use crate::message::Message;
 use crate::snippet::{
     detect_snippet_type, extract_colors_from_text, language_to_extension, ColorData, Snippet,
@@ -24,6 +24,7 @@ pub struct Shard {
     pub status_message: Option<String>,
     pub filter_text: String,
     pub filter_kind: Option<SnippetKind>,
+    pub filter_palette: Option<i64>,
     pub selected_snippet: Option<i64>,
     pub color_picker: Option<ColorPickerState>,
     pub code_editor: Option<CodeEditorState>,
@@ -31,6 +32,11 @@ pub struct Shard {
     pub settings: Option<SettingsState>,
     pub config: Config,
     pub add_menu_open: bool,
+    pub palettes: Vec<Palette>,
+    pub palette_manager_open: bool,
+    pub palette_dropdown_snippet: Option<i64>,
+    pub snippet_palettes: std::collections::HashMap<i64, Vec<i64>>,
+    pub new_palette_name: String,
 }
 
 impl Default for Shard {
@@ -44,6 +50,7 @@ impl Default for Shard {
             status_message: None,
             filter_text: String::new(),
             filter_kind: None,
+            filter_palette: None,
             selected_snippet: None,
             color_picker: None,
             code_editor: None,
@@ -51,6 +58,11 @@ impl Default for Shard {
             settings: None,
             config: Config::load(),
             add_menu_open: false,
+            palettes: Vec::new(),
+            palette_manager_open: false,
+            palette_dropdown_snippet: None,
+            snippet_palettes: std::collections::HashMap::new(),
+            new_palette_name: String::new(),
         }
     }
 }
@@ -58,8 +70,9 @@ impl Default for Shard {
 impl Shard {
     /// Create a new application instance.
     pub fn new() -> (Self, Task<Message>) {
-        let load_task = Task::perform(async { db::load_snippets() }, Message::SnippetsLoaded);
-        (Self::default(), load_task)
+        let load_snippets = Task::perform(async { db::load_snippets() }, Message::SnippetsLoaded);
+        let load_palettes = Task::perform(async { db::load_palettes() }, Message::PalettesLoaded);
+        (Self::default(), Task::batch([load_snippets, load_palettes]))
     }
 
     /// Handle application messages.
@@ -70,6 +83,8 @@ impl Shard {
                     Ok(snippets) => {
                         self.status_message = Some(format!("{} snippets loaded", snippets.len()));
                         self.snippets = snippets;
+                        // Load palette assignments for all snippets
+                        return self.load_all_snippet_palettes();
                     }
                     Err(e) => {
                         self.status_message = Some(format!("Load error: {}", e));
@@ -802,7 +817,160 @@ impl Shard {
                 }
                 Task::none()
             }
+
+            // === Palette Messages ===
+            Message::PalettesLoaded(result) => {
+                match result {
+                    Ok(palettes) => self.palettes = palettes,
+                    Err(e) => self.status_message = Some(format!("Palette load error: {}", e)),
+                }
+                Task::none()
+            }
+
+            Message::FilterPaletteChanged(palette_id) => {
+                self.filter_palette = palette_id;
+                Task::none()
+            }
+
+            Message::OpenPaletteManager => {
+                self.palette_manager_open = true;
+                Task::none()
+            }
+
+            Message::ClosePaletteManager => {
+                self.palette_manager_open = false;
+                self.new_palette_name.clear();
+                Task::none()
+            }
+
+            Message::NewPaletteNameChanged(name) => {
+                self.new_palette_name = name;
+                Task::none()
+            }
+
+            Message::CreatePalette(name) => {
+                let name = name.trim().to_string();
+                if name.is_empty() {
+                    return Task::none();
+                }
+                self.new_palette_name.clear();
+                Task::perform(
+                    async move { db::create_palette(name) },
+                    Message::PaletteCreated,
+                )
+            }
+
+            Message::PaletteCreated(result) => {
+                match result {
+                    Ok(palette) => {
+                        self.status_message = Some(format!("Created palette: {}", palette.name));
+                        self.palettes.push(palette);
+                        self.palettes.sort_by(|a, b| a.name.cmp(&b.name));
+                    }
+                    Err(e) => self.status_message = Some(format!("Create failed: {}", e)),
+                }
+                Task::none()
+            }
+
+            Message::RenamePalette(id, new_name) => {
+                let new_name = new_name.trim().to_string();
+                if new_name.is_empty() {
+                    return Task::none();
+                }
+                Task::perform(
+                    async move { db::rename_palette(id, new_name) },
+                    Message::PaletteRenamed,
+                )
+            }
+
+            Message::PaletteRenamed(result) => {
+                match result {
+                    Ok(palette) => {
+                        if let Some(p) = self.palettes.iter_mut().find(|p| p.id == palette.id) {
+                            p.name = palette.name.clone();
+                        }
+                        self.palettes.sort_by(|a, b| a.name.cmp(&b.name));
+                        self.status_message = Some(format!("Renamed palette: {}", palette.name));
+                    }
+                    Err(e) => self.status_message = Some(format!("Rename failed: {}", e)),
+                }
+                Task::none()
+            }
+
+            Message::DeletePalette(id) => Task::perform(
+                async move { db::delete_palette(id) },
+                Message::PaletteDeleted,
+            ),
+
+            Message::PaletteDeleted(result) => {
+                match result {
+                    Ok(id) => {
+                        self.palettes.retain(|p| p.id != id);
+                        // Clear filter if deleted palette was selected
+                        if self.filter_palette == Some(id) {
+                            self.filter_palette = None;
+                        }
+                        // Remove from snippet_palettes
+                        for palette_ids in self.snippet_palettes.values_mut() {
+                            palette_ids.retain(|&pid| pid != id);
+                        }
+                        self.status_message = Some("Palette deleted".to_string());
+                    }
+                    Err(e) => self.status_message = Some(format!("Delete failed: {}", e)),
+                }
+                Task::none()
+            }
+
+            Message::AddSnippetToPalette(snippet_id, palette_id) => {
+                // Update local state immediately
+                self.snippet_palettes
+                    .entry(snippet_id)
+                    .or_default()
+                    .push(palette_id);
+                self.palette_dropdown_snippet = None;
+                Task::perform(
+                    async move { db::add_snippet_to_palette(palette_id, snippet_id) },
+                    Message::SnippetPaletteUpdated,
+                )
+            }
+
+            Message::RemoveSnippetFromPalette(snippet_id, palette_id) => {
+                // Update local state immediately
+                if let Some(palette_ids) = self.snippet_palettes.get_mut(&snippet_id) {
+                    palette_ids.retain(|&id| id != palette_id);
+                }
+                Task::perform(
+                    async move { db::remove_snippet_from_palette(palette_id, snippet_id) },
+                    Message::SnippetPaletteUpdated,
+                )
+            }
+
+            Message::SnippetPaletteUpdated(result) => {
+                if let Err(e) = result {
+                    self.status_message = Some(format!("Palette update failed: {}", e));
+                }
+                Task::none()
+            }
+
+            Message::TogglePaletteDropdown(snippet_id) => {
+                self.palette_dropdown_snippet = if self.palette_dropdown_snippet == snippet_id {
+                    None
+                } else {
+                    snippet_id
+                };
+                Task::none()
+            }
         }
+    }
+
+    /// Load palette assignments for all snippets.
+    fn load_all_snippet_palettes(&mut self) -> Task<Message> {
+        for snippet in &self.snippets {
+            if let Ok(palette_ids) = db::get_palettes_for_snippet(snippet.id) {
+                self.snippet_palettes.insert(snippet.id, palette_ids);
+            }
+        }
+        Task::none()
     }
 
     /// Helper to copy a color format to clipboard.

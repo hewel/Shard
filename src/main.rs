@@ -49,6 +49,12 @@ impl Shard {
             text_editor: self.text_editor.as_ref(),
             settings: self.settings.as_ref(),
             add_menu_open: self.add_menu_open,
+            palettes: &self.palettes,
+            filter_palette: self.filter_palette,
+            palette_manager_open: self.palette_manager_open,
+            palette_dropdown_snippet: self.palette_dropdown_snippet,
+            snippet_palettes: &self.snippet_palettes,
+            new_palette_name: &self.new_palette_name,
         })
     }
 

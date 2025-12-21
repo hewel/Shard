@@ -8,7 +8,7 @@ use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::PathBuf;
 
 /// Schema version for migrations.
-const SCHEMA_VERSION: i32 = 2;
+const SCHEMA_VERSION: i32 = 3;
 
 /// Get the path to the database file.
 pub fn get_database_path() -> Result<PathBuf, String> {
@@ -69,6 +69,10 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
     if current_version < 2 {
         migrate_v2(conn)?;
+    }
+
+    if current_version < 3 {
+        migrate_v3(conn)?;
     }
 
     // Update schema version
@@ -140,6 +144,35 @@ fn migrate_v2(conn: &Connection) -> Result<(), String> {
         // Optionally drop old table (commented out for safety)
         // conn.execute("DROP TABLE colors", []).ok();
     }
+
+    Ok(())
+}
+
+/// Migration v3: Create palettes and palette_snippets tables.
+fn migrate_v3(conn: &Connection) -> Result<(), String> {
+    // Create palettes table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS palettes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )
+    .map_err(|e| format!("Palettes table error: {}", e))?;
+
+    // Create junction table for many-to-many relationship
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS palette_snippets (
+            palette_id INTEGER NOT NULL,
+            snippet_id INTEGER NOT NULL,
+            PRIMARY KEY (palette_id, snippet_id),
+            FOREIGN KEY (palette_id) REFERENCES palettes(id) ON DELETE CASCADE,
+            FOREIGN KEY (snippet_id) REFERENCES snippets(id) ON DELETE CASCADE
+        )",
+        [],
+    )
+    .map_err(|e| format!("Palette_snippets table error: {}", e))?;
 
     Ok(())
 }
@@ -513,6 +546,141 @@ pub fn add_code_snippet(code: String, language: String, label: String) -> Result
 /// Add a text snippet.
 pub fn add_text_snippet(text: String, label: String) -> Result<Snippet, String> {
     insert_snippet(Snippet::text(text, label))
+}
+
+// ============================================================================
+// Palette Operations
+// ============================================================================
+
+/// A palette for organizing snippets.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Palette {
+    pub id: i64,
+    pub name: String,
+}
+
+/// Load all palettes from the database.
+pub fn load_palettes() -> Result<Vec<Palette>, String> {
+    let conn = open_connection()?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, name FROM palettes ORDER BY name ASC")
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    let palettes = stmt
+        .query_map([], |row| {
+            Ok(Palette {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {}", e))?
+        .collect::<SqlResult<Vec<_>>>()
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    Ok(palettes)
+}
+
+/// Create a new palette.
+pub fn create_palette(name: String) -> Result<Palette, String> {
+    let conn = open_connection()?;
+
+    conn.execute("INSERT INTO palettes (name) VALUES (?1)", params![name])
+        .map_err(|e| format!("Insert error: {}", e))?;
+
+    let id = conn.last_insert_rowid();
+    Ok(Palette { id, name })
+}
+
+/// Rename a palette.
+pub fn rename_palette(id: i64, new_name: String) -> Result<Palette, String> {
+    let conn = open_connection()?;
+
+    conn.execute(
+        "UPDATE palettes SET name = ?1 WHERE id = ?2",
+        params![new_name, id],
+    )
+    .map_err(|e| format!("Update error: {}", e))?;
+
+    Ok(Palette { id, name: new_name })
+}
+
+/// Delete a palette (cascade deletes palette_snippets entries).
+pub fn delete_palette(id: i64) -> Result<i64, String> {
+    let conn = open_connection()?;
+
+    // Delete palette_snippets entries first (in case FK cascade isn't working)
+    conn.execute(
+        "DELETE FROM palette_snippets WHERE palette_id = ?1",
+        params![id],
+    )
+    .map_err(|e| format!("Delete error: {}", e))?;
+
+    conn.execute("DELETE FROM palettes WHERE id = ?1", params![id])
+        .map_err(|e| format!("Delete error: {}", e))?;
+
+    Ok(id)
+}
+
+/// Add a snippet to a palette.
+pub fn add_snippet_to_palette(palette_id: i64, snippet_id: i64) -> Result<(), String> {
+    let conn = open_connection()?;
+
+    conn.execute(
+        "INSERT OR IGNORE INTO palette_snippets (palette_id, snippet_id) VALUES (?1, ?2)",
+        params![palette_id, snippet_id],
+    )
+    .map_err(|e| format!("Insert error: {}", e))?;
+
+    Ok(())
+}
+
+/// Remove a snippet from a palette.
+pub fn remove_snippet_from_palette(palette_id: i64, snippet_id: i64) -> Result<(), String> {
+    let conn = open_connection()?;
+
+    conn.execute(
+        "DELETE FROM palette_snippets WHERE palette_id = ?1 AND snippet_id = ?2",
+        params![palette_id, snippet_id],
+    )
+    .map_err(|e| format!("Delete error: {}", e))?;
+
+    Ok(())
+}
+
+/// Get all palette IDs for a snippet.
+pub fn get_palettes_for_snippet(snippet_id: i64) -> Result<Vec<i64>, String> {
+    let conn = open_connection()?;
+
+    let mut stmt = conn
+        .prepare("SELECT palette_id FROM palette_snippets WHERE snippet_id = ?1")
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    let palette_ids = stmt
+        .query_map(params![snippet_id], |row| row.get(0))
+        .map_err(|e| format!("Query error: {}", e))?
+        .collect::<SqlResult<Vec<i64>>>()
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    Ok(palette_ids)
+}
+
+/// Get all snippet IDs in a palette.
+#[allow(dead_code)]
+pub fn get_snippets_in_palette(palette_id: i64) -> Result<Vec<i64>, String> {
+    let conn = open_connection()?;
+
+    let mut stmt = conn
+        .prepare("SELECT snippet_id FROM palette_snippets WHERE palette_id = ?1")
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    let snippet_ids = stmt
+        .query_map(params![palette_id], |row| row.get(0))
+        .map_err(|e| format!("Query error: {}", e))?
+        .collect::<SqlResult<Vec<i64>>>()
+        .map_err(|e| format!("Query error: {}", e))?;
+
+    Ok(snippet_ids)
 }
 
 #[cfg(test)]

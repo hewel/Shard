@@ -1,6 +1,7 @@
 //! Application messages for the Shard snippet manager.
 
 use crate::config::{EditorPreset, Shortcut, ShortcutAction};
+use crate::db::Palette;
 use crate::snippet::{Snippet, SnippetKind};
 use crate::view::PickerMode;
 
@@ -104,4 +105,21 @@ pub enum Message {
     StopRecordingShortcut,
     ShortcutRecorded(ShortcutAction, Shortcut),
     ResetShortcutToDefault(ShortcutAction),
+
+    // === Palettes ===
+    PalettesLoaded(Result<Vec<Palette>, String>),
+    FilterPaletteChanged(Option<i64>),
+    OpenPaletteManager,
+    ClosePaletteManager,
+    NewPaletteNameChanged(String),
+    CreatePalette(String),
+    PaletteCreated(Result<Palette, String>),
+    RenamePalette(i64, String),
+    PaletteRenamed(Result<Palette, String>),
+    DeletePalette(i64),
+    PaletteDeleted(Result<i64, String>),
+    AddSnippetToPalette(i64, i64),      // (snippet_id, palette_id)
+    RemoveSnippetFromPalette(i64, i64), // (snippet_id, palette_id)
+    SnippetPaletteUpdated(Result<(), String>),
+    TogglePaletteDropdown(Option<i64>), // snippet_id to show dropdown for
 }

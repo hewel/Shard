@@ -115,6 +115,16 @@ pub fn gear() -> text::Text<'static> {
     icon('\u{e27a}')
 }
 
+/// Tag icon (for palettes/categories)
+pub fn tag() -> text::Text<'static> {
+    icon('\u{e478}')
+}
+
+/// Folder icon (for grouping)
+pub fn folder() -> text::Text<'static> {
+    icon('\u{e24a}')
+}
+
 // === Icon constants for use in text widgets ===
 
 /// Code icon codepoint

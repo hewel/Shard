@@ -21,6 +21,9 @@ use iced::widget::{
 };
 use iced::{Element, Length};
 
+use std::collections::HashMap;
+
+use crate::db::Palette;
 use crate::icons;
 use crate::message::Message;
 use crate::snippet::{Snippet, SnippetContent, SnippetKind};
@@ -48,6 +51,13 @@ pub struct ViewContext<'a> {
     pub text_editor: Option<&'a TextEditorState>,
     pub settings: Option<&'a SettingsState>,
     pub add_menu_open: bool,
+    // Palette fields
+    pub palettes: &'a [Palette],
+    pub filter_palette: Option<i64>,
+    pub palette_manager_open: bool,
+    pub palette_dropdown_snippet: Option<i64>,
+    pub snippet_palettes: &'a HashMap<i64, Vec<i64>>,
+    pub new_palette_name: &'a str,
 }
 
 /// Render the main application view.
@@ -66,6 +76,12 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         text_editor,
         settings,
         add_menu_open,
+        palettes,
+        filter_palette,
+        palette_manager_open,
+        palette_dropdown_snippet,
+        snippet_palettes,
+        new_palette_name,
     } = ctx;
 
     let has_error = input_error.is_some();
@@ -116,6 +132,9 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     ]
     .spacing(SPACE_XS);
 
+    // Palette filter dropdown
+    let palette_filter = view_palette_filter(palettes, filter_palette);
+
     // Filter input
     let filter_input = text_input("Search...", filter_text)
         .on_input(Message::FilterChanged)
@@ -146,6 +165,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
 
     let header_row_2 = row![
         tab_row,
+        palette_filter,
         spacer,
         filter_input,
         clipboard_toggle,
@@ -182,6 +202,16 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
             if let Some(kind) = filter_kind {
                 if &s.kind() != kind {
                     return false;
+                }
+            }
+            // Filter by palette
+            if let Some(palette_id) = filter_palette {
+                if let Some(snippet_palette_ids) = snippet_palettes.get(&s.id) {
+                    if !snippet_palette_ids.contains(&palette_id) {
+                        return false;
+                    }
+                } else {
+                    return false; // Snippet not in any palette
                 }
             }
             // Filter by text
@@ -228,11 +258,12 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
 
     // Status bar
     let status_text = status_message.unwrap_or("Ready");
-    let count_text = if filter_text.trim().is_empty() && filter_kind.is_none() {
-        format!("{} snippets", snippets.len())
-    } else {
-        format!("{} / {} snippets", filtered_snippets.len(), snippets.len())
-    };
+    let count_text =
+        if filter_text.trim().is_empty() && filter_kind.is_none() && filter_palette.is_none() {
+            format!("{} snippets", snippets.len())
+        } else {
+            format!("{} / {} snippets", filtered_snippets.len(), snippets.len())
+        };
     let status_bar_content = row![
         text(count_text).size(12).color(TEXT_SECONDARY),
         text("|").size(12).color(TEXT_SECONDARY),
@@ -254,6 +285,8 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     // Build overlay layer (always present to maintain consistent widget tree)
     let overlay: Element<'_, Message> = if let Some(s) = settings {
         settings::view_settings_modal(s)
+    } else if palette_manager_open {
+        view_palette_manager_modal(palettes, new_palette_name)
     } else if let Some(picker) = color_picker {
         view_color_picker_modal(picker)
     } else if let Some(editor) = code_editor {
@@ -262,6 +295,13 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         text_editor::view_text_editor_modal(editor)
     } else if add_menu_open {
         view_add_menu_dropdown()
+    } else if palette_dropdown_snippet.is_some() {
+        // Palette assignment dropdown (shown over snippet card)
+        view_palette_assignment_dropdown(
+            palettes,
+            palette_dropdown_snippet.unwrap(),
+            snippet_palettes,
+        )
     } else {
         // Empty overlay - preserves widget tree structure
         container(text("")).width(0).height(0).into()
@@ -344,5 +384,217 @@ fn view_add_menu_dropdown() -> Element<'static, Message> {
     // Click-outside-to-close overlay (transparent, minimal overhead)
     mouse_area(positioned_menu)
         .on_press(Message::CloseAddMenu)
+        .into()
+}
+
+/// Render the palette filter dropdown in header.
+fn view_palette_filter<'a>(
+    palettes: &'a [Palette],
+    filter_palette: Option<i64>,
+) -> Element<'a, Message> {
+    // Create palette selection buttons
+    let all_btn = button(text("All Palettes").size(12))
+        .on_press(Message::FilterPaletteChanged(None))
+        .padding([SPACE_XS, SPACE_SM])
+        .style(if filter_palette.is_none() {
+            primary_button_style
+        } else {
+            secondary_button_style
+        });
+
+    let palette_buttons: Vec<Element<'a, Message>> = palettes
+        .iter()
+        .map(|p| {
+            let is_selected = filter_palette == Some(p.id);
+            button(text(&p.name).size(12))
+                .on_press(Message::FilterPaletteChanged(Some(p.id)))
+                .padding([SPACE_XS, SPACE_SM])
+                .style(if is_selected {
+                    primary_button_style
+                } else {
+                    secondary_button_style
+                })
+                .into()
+        })
+        .collect();
+
+    // Manage palettes button
+    let manage_btn = button(icons::tag().size(12))
+        .on_press(Message::OpenPaletteManager)
+        .padding([SPACE_XS, SPACE_SM])
+        .style(subtle_button_style);
+
+    let mut items: Vec<Element<'a, Message>> = vec![all_btn.into()];
+    items.extend(palette_buttons);
+    items.push(manage_btn.into());
+
+    row(items).spacing(SPACE_XS).into()
+}
+
+/// Render the palette manager modal.
+fn view_palette_manager_modal<'a>(
+    palettes: &'a [Palette],
+    new_palette_name: &'a str,
+) -> Element<'a, Message> {
+    use crate::theme::{modal_dialog_style, modal_overlay_style};
+
+    // Title
+    let title = text("Manage Palettes").size(18);
+
+    // New palette input
+    let new_input = text_input("New palette name...", new_palette_name)
+        .on_input(Message::NewPaletteNameChanged)
+        .on_submit(Message::CreatePalette(new_palette_name.to_string()))
+        .padding(SPACE_SM)
+        .width(Length::Fill)
+        .style(|theme, status| input_style(theme, status, false));
+
+    let create_btn = button(text("Create").size(13))
+        .on_press(Message::CreatePalette(new_palette_name.to_string()))
+        .padding([SPACE_SM, SPACE_MD])
+        .style(primary_button_style);
+
+    let new_row = row![new_input, create_btn]
+        .spacing(SPACE_SM)
+        .align_y(iced::Alignment::Center);
+
+    // Palette list
+    let palette_items: Vec<Element<'a, Message>> = palettes
+        .iter()
+        .map(|p| {
+            let delete_btn = button(icons::trash().size(14))
+                .on_press(Message::DeletePalette(p.id))
+                .padding(SPACE_XS)
+                .style(subtle_button_style);
+
+            container(
+                row![text(&p.name).size(14).width(Length::Fill), delete_btn,]
+                    .spacing(SPACE_SM)
+                    .align_y(iced::Alignment::Center),
+            )
+            .padding(SPACE_SM)
+            .style(|_theme| {
+                iced::widget::container::Style::default()
+                    .background(crate::theme::BG_ELEVATED)
+                    .border(iced::Border::default().rounded(4.0))
+            })
+            .into()
+        })
+        .collect();
+
+    let palette_list: Element<'a, Message> = if palette_items.is_empty() {
+        container(
+            text("No palettes yet. Create one above.")
+                .size(13)
+                .color(TEXT_MUTED),
+        )
+        .padding(SPACE_MD)
+        .center_x(Length::Fill)
+        .into()
+    } else {
+        scrollable(column(palette_items).spacing(SPACE_XS))
+            .height(Length::Fixed(200.0))
+            .style(scrollbar_style)
+            .into()
+    };
+
+    // Close button
+    let close_btn = button(text("Close").size(13))
+        .on_press(Message::ClosePaletteManager)
+        .padding([SPACE_SM, SPACE_MD])
+        .style(secondary_button_style);
+
+    // Modal content
+    let modal_content = container(
+        column![title, new_row, palette_list, close_btn]
+            .spacing(SPACE_MD)
+            .align_x(iced::Alignment::End),
+    )
+    .padding(SPACE_LG)
+    .width(Length::Fixed(400.0))
+    .style(modal_dialog_style);
+
+    // Center modal
+    let centered = container(modal_content)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x(Length::Fill)
+        .center_y(Length::Fill);
+
+    // Backdrop
+    mouse_area(
+        container(centered)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(modal_overlay_style),
+    )
+    .on_press(Message::ClosePaletteManager)
+    .into()
+}
+
+/// Render palette assignment dropdown overlay.
+fn view_palette_assignment_dropdown<'a>(
+    palettes: &'a [Palette],
+    snippet_id: i64,
+    snippet_palettes: &'a HashMap<i64, Vec<i64>>,
+) -> Element<'a, Message> {
+    let snippet_palette_ids = snippet_palettes
+        .get(&snippet_id)
+        .cloned()
+        .unwrap_or_default();
+
+    let items: Vec<Element<'a, Message>> = palettes
+        .iter()
+        .map(|p| {
+            let is_in_palette = snippet_palette_ids.contains(&p.id);
+            let msg = if is_in_palette {
+                Message::RemoveSnippetFromPalette(snippet_id, p.id)
+            } else {
+                Message::AddSnippetToPalette(snippet_id, p.id)
+            };
+            let msg_for_checkbox = msg.clone();
+
+            button(
+                row![
+                    checkbox(is_in_palette).on_toggle(move |_| msg_for_checkbox.clone()),
+                    text(&p.name).size(13),
+                ]
+                .spacing(SPACE_SM)
+                .align_y(iced::Alignment::Center),
+            )
+            .on_press(msg)
+            .padding([SPACE_SM, SPACE_MD])
+            .width(Length::Fill)
+            .style(dropdown_item_style)
+            .into()
+        })
+        .collect();
+
+    let menu_content: Element<'a, Message> = if items.is_empty() {
+        container(
+            text("No palettes. Create one in settings.")
+                .size(12)
+                .color(TEXT_MUTED),
+        )
+        .padding(SPACE_SM)
+        .into()
+    } else {
+        column(items).spacing(2).into()
+    };
+
+    let menu = container(menu_content)
+        .padding(SPACE_XS)
+        .width(Length::Fixed(180.0))
+        .style(dropdown_menu_style);
+
+    // Position dropdown (center of screen for simplicity)
+    let positioned = container(menu)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x(Length::Fill)
+        .center_y(Length::Fill);
+
+    mouse_area(positioned)
+        .on_press(Message::TogglePaletteDropdown(None))
         .into()
 }
