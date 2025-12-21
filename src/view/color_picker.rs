@@ -49,6 +49,8 @@ pub struct ColorPickerState {
     pub alpha: f32,
     /// Label for the color
     pub label: String,
+    /// Original color when editing (r, g, b, a) - used to detect changes
+    original_color: Option<(u8, u8, u8, f32)>,
 }
 
 impl ColorPickerState {
@@ -65,6 +67,7 @@ impl ColorPickerState {
             oklch_h: 0.0,
             alpha: 1.0,
             label: String::new(),
+            original_color: None,
         }
     }
 
@@ -84,6 +87,7 @@ impl ColorPickerState {
                 oklch_h: ok_h,
                 alpha: color.a,
                 label: snippet.label.clone(),
+                original_color: Some((color.r, color.g, color.b, color.a)),
             }
         } else {
             Self::new_color(default_mode)
@@ -126,6 +130,17 @@ impl ColorPickerState {
         self.oklch_l = ok_l;
         self.oklch_c = ok_c;
         self.oklch_h = ok_h;
+    }
+
+    /// Check if the color has changed from the original (when editing).
+    /// Returns true if editing and color differs from original.
+    pub fn has_color_changed(&self) -> bool {
+        if let Some((orig_r, orig_g, orig_b, orig_a)) = self.original_color {
+            let (r, g, b) = self.to_rgb();
+            r != orig_r || g != orig_g || b != orig_b || (self.alpha - orig_a).abs() > 0.001
+        } else {
+            false
+        }
     }
 }
 
@@ -341,24 +356,37 @@ pub fn view_color_picker_modal(picker: &ColorPickerState) -> Element<'_, Message
     .align_y(iced::Alignment::Center);
 
     // Action buttons
-    let action_buttons = row![
-        button(text("Cancel").size(14))
-            .on_press(Message::CloseColorPicker)
-            .padding(SPACE_SM)
-            .style(secondary_button_style),
-        button(
-            text(if picker.editing_id.is_some() {
-                "Save"
-            } else {
-                "Add"
-            })
-            .size(14)
-        )
-        .on_press(Message::ConfirmColorPicker)
+    let cancel_btn = button(text("Cancel").size(14))
+        .on_press(Message::CloseColorPicker)
         .padding(SPACE_SM)
-        .style(primary_button_style),
-    ]
-    .spacing(SPACE_SM);
+        .style(secondary_button_style);
+
+    let confirm_btn = button(
+        text(if picker.editing_id.is_some() {
+            "Save"
+        } else {
+            "Add"
+        })
+        .size(14),
+    )
+    .on_press(Message::ConfirmColorPicker)
+    .padding(SPACE_SM)
+    .style(primary_button_style);
+
+    // Show "Save as New" button when editing and color has changed
+    let action_buttons: Element<'_, Message> =
+        if picker.editing_id.is_some() && picker.has_color_changed() {
+            let save_as_new_btn = button(text("Save as New").size(14))
+                .on_press(Message::SaveColorAsNew)
+                .padding(SPACE_SM)
+                .style(secondary_button_style);
+
+            row![cancel_btn, save_as_new_btn, confirm_btn]
+                .spacing(SPACE_SM)
+                .into()
+        } else {
+            row![cancel_btn, confirm_btn].spacing(SPACE_SM).into()
+        };
 
     // Modal content
     let modal_content = column![

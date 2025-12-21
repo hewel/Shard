@@ -10,10 +10,6 @@ use crate::view::PickerMode;
 pub enum Message {
     // === Initialization ===
     SnippetsLoaded(Result<Vec<Snippet>, String>),
-
-    // === Snippet Input (Color) ===
-    ColorInputChanged(String),
-    AddColorFromInput,
     SnippetAdded(Result<Snippet, String>),
 
     // === Unified Snippet Actions ===
@@ -45,7 +41,6 @@ pub enum Message {
     // === Keyboard Shortcuts ===
     PasteFromClipboard,
     PasteContentReceived(Option<String>),
-    FocusColorInput,
     EscapePressed,
     DeleteSelectedSnippet,
 
@@ -65,6 +60,7 @@ pub enum Message {
     PickerOklchHChanged(f32),
     PickerCLChanged(f32, f32),
     ConfirmColorPicker,
+    SaveColorAsNew,
     SnippetUpdated(Result<Snippet, String>),
 
     // === Code Editor ===

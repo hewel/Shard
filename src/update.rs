@@ -1,6 +1,5 @@
 //! Update logic for the Shard application.
 
-use iced::widget::operation;
 use iced::Task;
 
 use crate::config::{Config, KeyboardConfig};
@@ -11,14 +10,12 @@ use crate::snippet::{
     SnippetContent, SnippetKind,
 };
 use crate::view::{
-    CodeEditorState, ColorPickerState, PickerMode, SettingsState, TextEditorState, COLOR_INPUT_ID,
+    CodeEditorState, ColorPickerState, PickerMode, SettingsState, TextEditorState,
 };
 
 /// Application state.
 pub struct Shard {
     pub snippets: Vec<Snippet>,
-    pub color_input: String,
-    pub input_error: Option<String>,
     pub is_listening_clipboard: bool,
     pub last_clipboard_content: Option<String>,
     pub status_message: Option<String>,
@@ -43,8 +40,6 @@ impl Default for Shard {
     fn default() -> Self {
         Self {
             snippets: Vec::new(),
-            color_input: String::new(),
-            input_error: None,
             is_listening_clipboard: false,
             last_clipboard_content: None,
             status_message: None,
@@ -93,44 +88,6 @@ impl Shard {
                 Task::none()
             }
 
-            Message::ColorInputChanged(input) => {
-                self.color_input = input.clone();
-
-                // Real-time validation for color input
-                if input.trim().is_empty() {
-                    self.input_error = None;
-                } else {
-                    match ColorData::parse(&input) {
-                        Ok(_) => self.input_error = None,
-                        Err(e) => self.input_error = Some(e.to_string()),
-                    }
-                }
-                Task::none()
-            }
-
-            Message::AddColorFromInput => {
-                let input = self.color_input.clone();
-                if input.trim().is_empty() {
-                    return Task::none();
-                }
-
-                match ColorData::parse(&input) {
-                    Ok(color) => {
-                        let label = color.to_hex();
-                        Task::perform(
-                            async move {
-                                db::add_or_move_color(color.r, color.g, color.b, color.a, label)
-                            },
-                            Message::SnippetAdded,
-                        )
-                    }
-                    Err(e) => {
-                        self.input_error = Some(e.to_string());
-                        Task::none()
-                    }
-                }
-            }
-
             Message::SnippetAdded(result) => {
                 match result {
                     Ok(snippet) => {
@@ -138,8 +95,6 @@ impl Shard {
                         self.snippets.retain(|s| s.id != snippet.id);
                         // Add at the beginning
                         self.snippets.insert(0, snippet);
-                        self.color_input.clear();
-                        self.input_error = None;
                         self.status_message = Some("Snippet added".to_string());
                     }
                     Err(e) => {
@@ -391,8 +346,6 @@ impl Shard {
                 Task::none()
             }
 
-            Message::FocusColorInput => operation::focus(COLOR_INPUT_ID),
-
             Message::EscapePressed => {
                 // Priority: close modals/menus > clear filter > deselect
                 if self.add_menu_open {
@@ -553,6 +506,27 @@ impl Shard {
                             Message::SnippetAdded,
                         )
                     }
+                } else {
+                    Task::none()
+                }
+            }
+
+            Message::SaveColorAsNew => {
+                // Save the current picker color as a new snippet (without modifying the original)
+                if let Some(picker) = self.color_picker.take() {
+                    let (r, g, b) = picker.to_rgb();
+                    let alpha = picker.alpha;
+                    let label = if picker.label.is_empty() {
+                        ColorData::new(r, g, b, alpha).to_hex()
+                    } else {
+                        picker.label.clone()
+                    };
+
+                    // Always add as new, regardless of editing_id
+                    Task::perform(
+                        async move { db::add_or_move_color(r, g, b, alpha, label) },
+                        Message::SnippetAdded,
+                    )
                 } else {
                     Task::none()
                 }

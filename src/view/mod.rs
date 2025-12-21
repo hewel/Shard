@@ -17,7 +17,7 @@ pub use text_card::view_text_card;
 pub use text_editor::TextEditorState;
 
 use iced::widget::{
-    button, checkbox, column, container, mouse_area, row, scrollable, stack, text, text_input, Id,
+    button, checkbox, column, container, mouse_area, row, scrollable, stack, text, text_input,
 };
 use iced::{Element, Length};
 
@@ -33,14 +33,9 @@ use crate::theme::{
     SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
 
-/// Input field ID for keyboard focus.
-pub const COLOR_INPUT_ID: &str = "color_input";
-
 /// Context for rendering the main view.
 pub struct ViewContext<'a> {
     pub snippets: &'a [Snippet],
-    pub color_input: &'a str,
-    pub input_error: Option<&'a str>,
     pub is_listening_clipboard: bool,
     pub status_message: Option<&'a str>,
     pub filter_text: &'a str,
@@ -64,8 +59,6 @@ pub struct ViewContext<'a> {
 pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     let ViewContext {
         snippets,
-        color_input,
-        input_error,
         is_listening_clipboard,
         status_message,
         filter_text,
@@ -84,28 +77,13 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         new_palette_name,
     } = ctx;
 
-    let has_error = input_error.is_some();
-
-    // === HEADER ROW 1: Color input + Add dropdown ===
-    let color_input_widget = text_input("Enter color (hex, rgb, hsl, oklch)...", color_input)
-        .id(Id::from(COLOR_INPUT_ID))
-        .on_input(Message::ColorInputChanged)
-        .on_submit(Message::AddColorFromInput)
-        .width(Length::Fill)
-        .padding(SPACE_SM)
-        .style(move |theme, status| input_style(theme, status, has_error));
-
     // Add button (plus icon) that toggles dropdown
-    let add_button = button(icons::plus().size(16))
+    let add_button = button(icons::plus().size(12))
         .on_press(Message::ToggleAddMenu)
-        .padding([SPACE_SM, SPACE_SM])
+        .padding([SPACE_XS, SPACE_SM])
         .style(primary_button_style);
 
-    let header_row_1 = row![color_input_widget, add_button]
-        .spacing(SPACE_MD)
-        .align_y(iced::Alignment::Center);
-
-    // === HEADER ROW 2: Tabs + Filter + Clipboard + Settings ===
+    // === HEADER: Tabs + Filter + Clipboard + Settings ===
 
     // Tab filter buttons
     let tab_row = row![
@@ -163,36 +141,23 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     // Spacer to push right-side elements
     let spacer = container(text("")).width(Length::Fill);
 
-    let header_row_2 = row![
+    let header_row = row![
         tab_row,
         palette_filter,
         spacer,
         filter_input,
         clipboard_toggle,
         settings_button,
+        add_button,
     ]
     .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
-    // Combined header
-    let header = container(column![header_row_1, header_row_2].spacing(SPACE_SM))
+    // Header container
+    let header = container(header_row)
         .width(Length::Fill)
         .padding([SPACE_MD, SPACE_MD])
         .style(header_style);
-
-    // Error message
-    let error_text: Element<'_, Message> = if let Some(error) = input_error {
-        container(text(error).size(12).color(crate::theme::DANGER))
-            .padding(
-                iced::Padding::new(0.0)
-                    .left(SPACE_LG)
-                    .right(SPACE_LG)
-                    .bottom(SPACE_SM),
-            )
-            .into()
-    } else {
-        container(text("")).into()
-    };
 
     // Filter snippets
     let filtered_snippets: Vec<&Snippet> = snippets
@@ -277,7 +242,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .style(status_bar_style);
 
     // Main layout
-    let main_content = container(column![header, error_text, snippets_list, status_bar])
+    let main_content = container(column![header, snippets_list, status_bar])
         .width(Length::Fill)
         .height(Length::Fill)
         .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));

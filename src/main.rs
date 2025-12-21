@@ -37,8 +37,6 @@ impl Shard {
     pub fn view(&self) -> Element<'_, Message> {
         view::view(view::ViewContext {
             snippets: &self.snippets,
-            color_input: &self.color_input,
-            input_error: self.input_error.as_deref(),
             is_listening_clipboard: self.is_listening_clipboard,
             status_message: self.status_message.as_deref(),
             filter_text: &self.filter_text,
@@ -92,7 +90,7 @@ impl Shard {
                 if keyboard_config.paste.matches(&key, modifiers) {
                     Some(Message::PasteFromClipboard)
                 } else if keyboard_config.new_color.matches(&key, modifiers) {
-                    Some(Message::FocusColorInput)
+                    Some(Message::OpenColorPicker(None))
                 } else if keyboard_config.escape.matches(&key, modifiers) {
                     Some(Message::EscapePressed)
                 } else if keyboard_config.delete.matches(&key, modifiers) {
