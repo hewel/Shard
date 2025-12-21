@@ -26,7 +26,8 @@ use crate::message::Message;
 use crate::snippet::{Snippet, SnippetContent, SnippetKind};
 use crate::theme::{
     header_style, input_style, primary_button_style, secondary_button_style, status_bar_style,
-    subtle_button_style, BG_BASE, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_SECONDARY,
+    subtle_button_style, BG_BASE, BG_ELEVATED, BORDER_SUBTLE, RADIUS_SM, SPACE_LG, SPACE_MD,
+    SPACE_SM, SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
 };
 
 /// Input field ID for keyboard focus.
@@ -67,94 +68,65 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
 
     let has_error = input_error.is_some();
 
-    // Header with input and controls
+    // === HEADER ROW 1: Color input + Add buttons ===
     let color_input_widget = text_input("Enter color (hex, rgb, hsl, oklch)...", color_input)
         .id(Id::from(COLOR_INPUT_ID))
         .on_input(Message::ColorInputChanged)
         .on_submit(Message::AddColorFromInput)
-        .width(Length::FillPortion(2))
+        .width(Length::Fill)
         .padding(SPACE_SM)
         .style(move |theme, status| input_style(theme, status, has_error));
 
-    // Add buttons for each snippet type
+    // Add buttons group
     let add_color_button = button(
-        row![icons::palette().size(14), text("Color")]
+        row![icons::palette().size(14), text("Color").size(13)]
             .spacing(SPACE_XS)
             .align_y(iced::Alignment::Center),
     )
     .on_press(Message::OpenColorPicker(None))
-    .padding(SPACE_SM)
+    .padding([SPACE_XS, SPACE_SM])
     .style(primary_button_style);
 
     let add_code_button = button(
-        row![icons::code().size(14), text("Code")]
+        row![icons::code().size(14), text("Code").size(13)]
             .spacing(SPACE_XS)
             .align_y(iced::Alignment::Center),
     )
     .on_press(Message::OpenCodeEditor(None))
-    .padding(SPACE_SM)
-    .style(secondary_button_style);
+    .padding([SPACE_XS, SPACE_SM])
+    .style(primary_button_style);
 
     let add_text_button = button(
-        row![icons::text_icon().size(14), text("Text")]
+        row![icons::text_icon().size(14), text("Text").size(13)]
             .spacing(SPACE_XS)
             .align_y(iced::Alignment::Center),
     )
     .on_press(Message::OpenTextEditor(None))
-    .padding(SPACE_SM)
-    .style(secondary_button_style);
+    .padding([SPACE_XS, SPACE_SM])
+    .style(primary_button_style);
 
-    let clipboard_toggle = row![
-        checkbox(is_listening_clipboard).on_toggle(Message::ToggleClipboard),
-        text("Listen").size(14).color(TEXT_SECONDARY),
-    ]
-    .spacing(SPACE_XS)
-    .align_y(iced::Alignment::Center);
+    // Button group container
+    let add_buttons_group = container(
+        row![add_color_button, add_code_button, add_text_button].spacing(SPACE_XS),
+    )
+    .padding([SPACE_XS, SPACE_XS])
+    .style(|_theme| {
+        iced::widget::container::Style::default()
+            .background(BG_ELEVATED)
+            .border(iced::Border {
+                color: BORDER_SUBTLE,
+                width: 1.0,
+                radius: RADIUS_SM.into(),
+            })
+    });
 
-    // Filter input
-    let filter_input = text_input("Filter...", filter_text)
-        .on_input(Message::FilterChanged)
-        .width(Length::Fixed(120.0))
-        .padding(SPACE_SM)
-        .size(14)
-        .style(|theme, status| input_style(theme, status, false));
+    let header_row_1 = row![color_input_widget, add_buttons_group]
+        .spacing(SPACE_MD)
+        .align_y(iced::Alignment::Center);
 
-    // Settings button
-    let settings_button = button(icons::gear().size(16))
-        .on_press(Message::OpenSettings)
-        .padding(SPACE_SM)
-        .style(subtle_button_style);
+    // === HEADER ROW 2: Tabs + Filter + Clipboard + Settings ===
 
-    let input_row = row![
-        color_input_widget,
-        add_color_button,
-        add_code_button,
-        add_text_button,
-        clipboard_toggle,
-        filter_input,
-        settings_button,
-    ]
-    .spacing(SPACE_SM)
-    .padding(SPACE_MD)
-    .align_y(iced::Alignment::Center);
-
-    let header = container(input_row).width(Length::Fill).style(header_style);
-
-    // Error message
-    let error_text: Element<'_, Message> = if let Some(error) = input_error {
-        container(text(error).size(12).color(crate::theme::DANGER))
-            .padding(
-                iced::Padding::new(0.0)
-                    .left(SPACE_MD)
-                    .right(SPACE_MD)
-                    .bottom(SPACE_SM),
-            )
-            .into()
-    } else {
-        container(text("")).into()
-    };
-
-    // Tab filter for snippet kinds
+    // Tab filter buttons
     let tab_row = row![
         tab_button(
             "All",
@@ -177,8 +149,67 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
             Message::FilterKindChanged(Some(SnippetKind::Text))
         ),
     ]
-    .spacing(SPACE_XS)
-    .padding([0.0, SPACE_MD]);
+    .spacing(SPACE_XS);
+
+    // Filter input
+    let filter_input = text_input("Search...", filter_text)
+        .on_input(Message::FilterChanged)
+        .width(Length::Fixed(160.0))
+        .padding([SPACE_XS, SPACE_SM])
+        .size(13)
+        .style(|theme, status| input_style(theme, status, false));
+
+    // Clipboard toggle
+    let clipboard_toggle = container(
+        row![
+            checkbox(is_listening_clipboard).on_toggle(Message::ToggleClipboard),
+            text("Auto-capture").size(12).color(TEXT_MUTED),
+        ]
+        .spacing(SPACE_XS)
+        .align_y(iced::Alignment::Center),
+    )
+    .padding([SPACE_XS, SPACE_SM]);
+
+    // Settings button
+    let settings_button = button(icons::gear().size(16))
+        .on_press(Message::OpenSettings)
+        .padding([SPACE_XS, SPACE_SM])
+        .style(subtle_button_style);
+
+    // Spacer to push right-side elements
+    let spacer = container(text("")).width(Length::Fill);
+
+    let header_row_2 = row![
+        tab_row,
+        spacer,
+        filter_input,
+        clipboard_toggle,
+        settings_button,
+    ]
+    .spacing(SPACE_SM)
+    .align_y(iced::Alignment::Center);
+
+    // Combined header
+    let header = container(
+        column![header_row_1, header_row_2].spacing(SPACE_SM),
+    )
+    .width(Length::Fill)
+    .padding([SPACE_SM, SPACE_MD])
+    .style(header_style);
+
+    // Error message
+    let error_text: Element<'_, Message> = if let Some(error) = input_error {
+        container(text(error).size(12).color(crate::theme::DANGER))
+            .padding(
+                iced::Padding::new(0.0)
+                    .left(SPACE_LG)
+                    .right(SPACE_LG)
+                    .bottom(SPACE_SM),
+            )
+            .into()
+    } else {
+        container(text("")).into()
+    };
 
     // Filter snippets
     let filtered_snippets: Vec<&Snippet> = snippets
@@ -251,13 +282,7 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         .style(status_bar_style);
 
     // Main layout
-    let main_content = container(column![
-        header,
-        error_text,
-        tab_row,
-        snippets_list,
-        status_bar
-    ])
+    let main_content = container(column![header, error_text, snippets_list, status_bar])
     .width(Length::Fill)
     .height(Length::Fill)
     .style(|_theme| iced::widget::container::Style::default().background(BG_BASE));
