@@ -183,13 +183,20 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
             container(text("")).into()
         };
 
-    // Data section - Export
+    // Data section - Export/Import
     let data_section_title = text("Data").size(14).color(TEXT_SECONDARY);
 
     let export_button = button(text("Export as JSON").size(12))
         .on_press(Message::ExportSnippetsJson)
         .padding([SPACE_XS, SPACE_SM])
         .style(secondary_button_style);
+
+    let import_button = button(text("Import from JSON").size(12))
+        .on_press(Message::ImportSnippetsJson)
+        .padding([SPACE_XS, SPACE_SM])
+        .style(secondary_button_style);
+
+    let data_buttons = row![export_button, import_button].spacing(SPACE_SM);
 
     // Keyboard shortcuts section
     let keyboard_section_title = text("Keyboard Shortcuts").size(14).color(TEXT_SECONDARY);
@@ -236,7 +243,7 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
         recording_hint,
         iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
         data_section_title,
-        export_button,
+        data_buttons,
         iced::widget::Space::new().height(Length::Fixed(SPACE_MD)),
         action_buttons,
     ]

@@ -7,11 +7,11 @@
 //! - OKLCH: `oklch(l% c h)`, `oklch(l% c h / a)`
 
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
 /// Color data with RGBA components.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ColorData {
     pub r: u8,
     pub g: u8,

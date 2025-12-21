@@ -138,7 +138,7 @@ The app manages three types of snippets: Colors, Code, and Text.
 
 ### Export/Import
 - [x] Export snippets as JSON
-- [ ] Import snippets from file
+- [x] Import snippets from file
 
 ### External Editor Integration
 - [x] **Open in External Editor**

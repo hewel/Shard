@@ -92,6 +92,8 @@ pub enum Message {
     // === Export/Import ===
     ExportSnippetsJson,
     ExportFinished(Result<String, String>),
+    ImportSnippetsJson,
+    ImportFinished(Result<String, String>),
 
     // === Add Menu Dropdown ===
     ToggleAddMenu,

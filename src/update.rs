@@ -783,6 +783,25 @@ impl Shard {
                 }
                 Task::none()
             }
+
+            Message::ImportSnippetsJson => {
+                Task::perform(import_snippets_json(), Message::ImportFinished)
+            }
+
+            Message::ImportFinished(result) => {
+                match result {
+                    Ok(msg) => {
+                        self.status_message = Some(msg);
+                        // Reload snippets from database
+                        return Task::perform(
+                            async { db::load_snippets() },
+                            Message::SnippetsLoaded,
+                        );
+                    }
+                    Err(e) => self.status_message = Some(format!("Import failed: {}", e)),
+                }
+                Task::none()
+            }
         }
     }
 
@@ -906,4 +925,68 @@ async fn export_snippets_json(snippets: Vec<crate::snippet::Snippet>) -> Result<
         snippets.len(),
         path.display()
     ))
+}
+
+/// Import snippets from a JSON file using a file picker dialog.
+async fn import_snippets_json() -> Result<String, String> {
+    use std::fs;
+
+    // Open file picker dialog
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("JSON", &["json"])
+        .set_title("Import Snippets")
+        .pick_file()
+        .await;
+
+    let file = match file {
+        Some(f) => f,
+        None => return Err("Import cancelled".to_string()),
+    };
+
+    // Read file contents
+    let contents =
+        fs::read_to_string(file.path()).map_err(|e| format!("Failed to read file: {}", e))?;
+
+    // Parse JSON
+    let snippets: Vec<Snippet> =
+        serde_json::from_str(&contents).map_err(|e| format!("Invalid JSON format: {}", e))?;
+
+    if snippets.is_empty() {
+        return Ok("No snippets to import".to_string());
+    }
+
+    // Insert each snippet into the database
+    let mut imported_count = 0;
+    let mut skipped_count = 0;
+
+    for snippet in snippets {
+        // Create new snippet based on content type (ignoring original ID)
+        let result = match &snippet.content {
+            SnippetContent::Color(color) => {
+                db::add_or_move_color(color.r, color.g, color.b, color.a, snippet.label.clone())
+            }
+            SnippetContent::Code(code) => db::add_code_snippet(
+                code.code.clone(),
+                code.language.clone(),
+                snippet.label.clone(),
+            ),
+            SnippetContent::Text(text) => {
+                db::add_text_snippet(text.text.clone(), snippet.label.clone())
+            }
+        };
+
+        match result {
+            Ok(_) => imported_count += 1,
+            Err(_) => skipped_count += 1,
+        }
+    }
+
+    if skipped_count > 0 {
+        Ok(format!(
+            "Imported {} snippets ({} skipped)",
+            imported_count, skipped_count
+        ))
+    } else {
+        Ok(format!("Imported {} snippets", imported_count))
+    }
 }
