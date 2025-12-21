@@ -14,6 +14,7 @@ mod update;
 mod view;
 mod widgets;
 
+use config::{Modifiers, Shortcut};
 use iced::keyboard;
 use iced::{Element, Subscription, Theme};
 
@@ -58,25 +59,42 @@ impl Shard {
 
     /// Handle keyboard and clipboard subscriptions.
     pub fn subscription(&self) -> Subscription<Message> {
-        use keyboard::key;
+        // Get recording action and keyboard config
+        let recording_action = self.settings.as_ref().and_then(|s| s.recording_action);
 
-        let keyboard_sub = keyboard::listen().filter_map(|event| {
-            let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
-                return None;
-            };
+        let keyboard_config = self.config.keyboard.clone();
 
-            match key.as_ref() {
-                keyboard::Key::Character("v") if modifiers.command() => {
+        // Use Subscription::with to pass captured state
+        let keyboard_sub = keyboard::listen()
+            .with((recording_action, keyboard_config))
+            .filter_map(|((recording_action, keyboard_config), event)| {
+                let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
+                    return None;
+                };
+
+                // If recording, capture the key press for shortcut assignment
+                if let Some(action) = recording_action {
+                    // Create shortcut from key press
+                    let shortcut = create_shortcut_from_key(&key, modifiers);
+                    if let Some(shortcut) = shortcut {
+                        return Some(Message::ShortcutRecorded(action, shortcut));
+                    }
+                    return None;
+                }
+
+                // Normal mode - check configured shortcuts
+                if keyboard_config.paste.matches(&key, modifiers) {
                     Some(Message::PasteFromClipboard)
-                }
-                keyboard::Key::Character("n") if modifiers.command() => {
+                } else if keyboard_config.new_color.matches(&key, modifiers) {
                     Some(Message::FocusColorInput)
+                } else if keyboard_config.escape.matches(&key, modifiers) {
+                    Some(Message::EscapePressed)
+                } else if keyboard_config.delete.matches(&key, modifiers) {
+                    Some(Message::DeleteSelectedSnippet)
+                } else {
+                    None
                 }
-                keyboard::Key::Named(key::Named::Escape) => Some(Message::EscapePressed),
-                keyboard::Key::Named(key::Named::Delete) => Some(Message::DeleteSelectedSnippet),
-                _ => None,
-            }
-        });
+            });
 
         let clipboard_sub = if self.is_listening_clipboard {
             iced::time::every(std::time::Duration::from_millis(500)).map(|_| Message::ClipboardTick)
@@ -85,5 +103,30 @@ impl Shard {
         };
 
         Subscription::batch([keyboard_sub, clipboard_sub])
+    }
+}
+
+/// Create a Shortcut from a key press event.
+fn create_shortcut_from_key(
+    key: &keyboard::Key,
+    modifiers: keyboard::Modifiers,
+) -> Option<Shortcut> {
+    let mods = Modifiers::new(modifiers.command(), modifiers.alt(), modifiers.shift());
+
+    match key {
+        keyboard::Key::Character(c) => {
+            // Don't capture pure modifier keys
+            let c_str = c.to_string();
+            if c_str.is_empty() {
+                return None;
+            }
+            Some(Shortcut::char_key(c_str.chars().next()?, mods))
+        }
+        keyboard::Key::Named(named) => {
+            // Allow named keys like Escape, Delete, Enter, etc.
+            let name = format!("{:?}", named);
+            Some(Shortcut::named(&name, mods))
+        }
+        _ => None,
     }
 }

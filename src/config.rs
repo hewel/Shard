@@ -4,8 +4,187 @@
 
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::fs;
 use std::path::PathBuf;
+
+// === Keyboard Shortcuts ===
+
+/// Modifier keys for a shortcut.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash, Serialize, Deserialize)]
+pub struct Modifiers {
+    pub ctrl: bool,
+    pub alt: bool,
+    pub shift: bool,
+}
+
+impl Modifiers {
+    pub const fn new(ctrl: bool, alt: bool, shift: bool) -> Self {
+        Self { ctrl, alt, shift }
+    }
+
+    pub const fn ctrl() -> Self {
+        Self::new(true, false, false)
+    }
+
+    pub const fn none() -> Self {
+        Self::new(false, false, false)
+    }
+
+    /// Check if iced modifiers match this config.
+    pub fn matches(&self, mods: iced::keyboard::Modifiers) -> bool {
+        self.ctrl == mods.command() && self.alt == mods.alt() && self.shift == mods.shift()
+    }
+}
+
+impl fmt::Display for Modifiers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut parts = Vec::new();
+        if self.ctrl {
+            parts.push("Ctrl");
+        }
+        if self.alt {
+            parts.push("Alt");
+        }
+        if self.shift {
+            parts.push("Shift");
+        }
+        write!(f, "{}", parts.join("+"))
+    }
+}
+
+/// A keyboard shortcut (key + modifiers).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Shortcut {
+    /// The key (e.g., "v", "n", "Delete", "Escape").
+    pub key: String,
+    /// Modifier keys.
+    #[serde(default)]
+    pub modifiers: Modifiers,
+}
+
+impl Shortcut {
+    pub const fn new(key: String, modifiers: Modifiers) -> Self {
+        Self { key, modifiers }
+    }
+
+    /// Create from a character key with modifiers.
+    pub fn char_key(c: char, modifiers: Modifiers) -> Self {
+        Self {
+            key: c.to_string(),
+            modifiers,
+        }
+    }
+
+    /// Create from a named key (e.g., "Delete", "Escape").
+    pub fn named(name: &str, modifiers: Modifiers) -> Self {
+        Self {
+            key: name.to_string(),
+            modifiers,
+        }
+    }
+
+    /// Check if this shortcut matches a key press.
+    pub fn matches(&self, key: &iced::keyboard::Key, modifiers: iced::keyboard::Modifiers) -> bool {
+        if !self.modifiers.matches(modifiers) {
+            return false;
+        }
+
+        match key {
+            iced::keyboard::Key::Character(c) => c.to_lowercase().eq(&self.key.to_lowercase()),
+            iced::keyboard::Key::Named(named) => {
+                let named_str = format!("{:?}", named);
+                named_str.eq_ignore_ascii_case(&self.key)
+            }
+            _ => false,
+        }
+    }
+}
+
+impl fmt::Display for Shortcut {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mods = self.modifiers.to_string();
+        if mods.is_empty() {
+            write!(f, "{}", self.key)
+        } else {
+            write!(f, "{}+{}", mods, self.key)
+        }
+    }
+}
+
+/// Available shortcut actions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShortcutAction {
+    Paste,
+    NewColor,
+    Escape,
+    Delete,
+}
+
+impl ShortcutAction {
+    /// Get display name for the action.
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            ShortcutAction::Paste => "Paste / Add Snippet",
+            ShortcutAction::NewColor => "New Color Input",
+            ShortcutAction::Escape => "Close / Cancel",
+            ShortcutAction::Delete => "Delete Selected",
+        }
+    }
+
+    /// All available actions.
+    pub const ALL: [ShortcutAction; 4] = [
+        ShortcutAction::Paste,
+        ShortcutAction::NewColor,
+        ShortcutAction::Escape,
+        ShortcutAction::Delete,
+    ];
+}
+
+/// Keyboard shortcuts configuration.
+#[derive(Debug, Clone, Hash, Serialize, Deserialize)]
+pub struct KeyboardConfig {
+    pub paste: Shortcut,
+    pub new_color: Shortcut,
+    pub escape: Shortcut,
+    pub delete: Shortcut,
+}
+
+impl Default for KeyboardConfig {
+    fn default() -> Self {
+        Self {
+            paste: Shortcut::char_key('v', Modifiers::ctrl()),
+            new_color: Shortcut::char_key('n', Modifiers::ctrl()),
+            escape: Shortcut::named("Escape", Modifiers::none()),
+            delete: Shortcut::named("Delete", Modifiers::none()),
+        }
+    }
+}
+
+impl KeyboardConfig {
+    /// Get shortcut for an action.
+    pub fn get(&self, action: ShortcutAction) -> &Shortcut {
+        match action {
+            ShortcutAction::Paste => &self.paste,
+            ShortcutAction::NewColor => &self.new_color,
+            ShortcutAction::Escape => &self.escape,
+            ShortcutAction::Delete => &self.delete,
+        }
+    }
+
+    /// Set shortcut for an action.
+    pub fn set(&mut self, action: ShortcutAction, shortcut: Shortcut) {
+        match action {
+            ShortcutAction::Paste => self.paste = shortcut,
+            ShortcutAction::NewColor => self.new_color = shortcut,
+            ShortcutAction::Escape => self.escape = shortcut,
+            ShortcutAction::Delete => self.delete = shortcut,
+        }
+    }
+}
+
+// === Editor Configuration ===
 
 /// Editor preset with predefined commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -109,6 +288,10 @@ pub struct Config {
     /// External editor settings.
     #[serde(default)]
     pub editor: EditorConfig,
+
+    /// Keyboard shortcuts.
+    #[serde(default)]
+    pub keyboard: KeyboardConfig,
 }
 
 impl Config {

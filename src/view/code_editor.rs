@@ -1,7 +1,9 @@
 //! Code editor modal for editing code snippets.
 
 use iced::highlighter;
-use iced::widget::{button, column, container, mouse_area, opaque, row, text, text_editor, text_input};
+use iced::widget::{
+    button, column, container, mouse_area, opaque, row, text, text_editor, text_input,
+};
 use iced::{Element, Length};
 
 use crate::icons;

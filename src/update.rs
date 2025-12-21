@@ -3,7 +3,7 @@
 use iced::widget::operation;
 use iced::Task;
 
-use crate::config::Config;
+use crate::config::{Config, KeyboardConfig};
 use crate::db;
 use crate::message::Message;
 use crate::snippet::{
@@ -724,6 +724,38 @@ impl Shard {
                 Task::none()
             }
 
+            // === Keyboard Shortcut Recording ===
+            Message::StartRecordingShortcut(action) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.recording_action = Some(action);
+                }
+                Task::none()
+            }
+
+            Message::StopRecordingShortcut => {
+                if let Some(settings) = &mut self.settings {
+                    settings.recording_action = None;
+                }
+                Task::none()
+            }
+
+            Message::ShortcutRecorded(action, shortcut) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.keyboard.set(action, shortcut);
+                    settings.recording_action = None;
+                }
+                Task::none()
+            }
+
+            Message::ResetShortcutToDefault(action) => {
+                if let Some(settings) = &mut self.settings {
+                    let default_keyboard = KeyboardConfig::default();
+                    let default_shortcut = default_keyboard.get(action).clone();
+                    settings.keyboard.set(action, default_shortcut);
+                }
+                Task::none()
+            }
+
             // === Add Menu Messages ===
             Message::ToggleAddMenu => {
                 self.add_menu_open = !self.add_menu_open;
@@ -854,9 +886,7 @@ async fn open_in_external_editor(
 }
 
 /// Export all snippets to a JSON file.
-async fn export_snippets_json(
-    snippets: Vec<crate::snippet::Snippet>,
-) -> Result<String, String> {
+async fn export_snippets_json(snippets: Vec<crate::snippet::Snippet>) -> Result<String, String> {
     use std::fs;
 
     let json = serde_json::to_string_pretty(&snippets)

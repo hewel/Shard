@@ -3,7 +3,7 @@
 use iced::widget::{button, column, container, mouse_area, opaque, row, text, text_input};
 use iced::{Element, Length};
 
-use crate::config::{Config, EditorPreset};
+use crate::config::{Config, EditorPreset, KeyboardConfig, ShortcutAction};
 use crate::icons;
 use crate::message::Message;
 use crate::theme::{
@@ -19,6 +19,10 @@ pub struct SettingsState {
     pub editor_preset: EditorPreset,
     /// Custom command (used when preset is Custom).
     pub custom_command: String,
+    /// Keyboard shortcuts configuration.
+    pub keyboard: KeyboardConfig,
+    /// Which shortcut action is currently being recorded (if any).
+    pub recording_action: Option<ShortcutAction>,
 }
 
 impl SettingsState {
@@ -27,6 +31,8 @@ impl SettingsState {
         Self {
             editor_preset: config.editor.preset,
             custom_command: config.editor.custom_command.clone(),
+            keyboard: config.keyboard.clone(),
+            recording_action: None,
         }
     }
 
@@ -34,6 +40,7 @@ impl SettingsState {
     pub fn apply_to_config(&self, config: &mut Config) {
         config.editor.preset = self.editor_preset;
         config.editor.custom_command = self.custom_command.clone();
+        config.keyboard = self.keyboard.clone();
     }
 }
 
@@ -45,6 +52,54 @@ const EDITOR_PRESETS: [EditorPreset; 5] = [
     EditorPreset::Vim,
     EditorPreset::Custom,
 ];
+
+/// Render a single shortcut row.
+fn view_shortcut_row<'a>(
+    action: ShortcutAction,
+    settings: &'a SettingsState,
+) -> Element<'a, Message> {
+    let shortcut = settings.keyboard.get(action);
+    let is_recording = settings.recording_action == Some(action);
+
+    let label = text(action.display_name())
+        .size(12)
+        .color(TEXT_PRIMARY)
+        .width(Length::Fixed(140.0));
+
+    let shortcut_display = if is_recording {
+        text("Press keys...")
+            .size(12)
+            .color(TEXT_MUTED)
+            .width(Length::Fixed(100.0))
+    } else {
+        text(shortcut.to_string())
+            .size(12)
+            .color(TEXT_SECONDARY)
+            .width(Length::Fixed(100.0))
+    };
+
+    let record_button = if is_recording {
+        button(text("Cancel").size(11))
+            .on_press(Message::StopRecordingShortcut)
+            .padding([SPACE_XS, SPACE_SM])
+            .style(secondary_button_style)
+    } else {
+        button(text("Record").size(11))
+            .on_press(Message::StartRecordingShortcut(action))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(secondary_button_style)
+    };
+
+    let reset_button = button(text("Reset").size(11))
+        .on_press(Message::ResetShortcutToDefault(action))
+        .padding([SPACE_XS, SPACE_SM])
+        .style(subtle_button_style);
+
+    row![label, shortcut_display, record_button, reset_button]
+        .spacing(SPACE_SM)
+        .align_y(iced::Alignment::Center)
+        .into()
+}
 
 /// Render the settings modal.
 pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
@@ -136,6 +191,25 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
         .padding([SPACE_XS, SPACE_SM])
         .style(secondary_button_style);
 
+    // Keyboard shortcuts section
+    let keyboard_section_title = text("Keyboard Shortcuts").size(14).color(TEXT_SECONDARY);
+
+    let shortcut_rows: Vec<Element<'_, Message>> = ShortcutAction::ALL
+        .iter()
+        .map(|action| view_shortcut_row(*action, settings))
+        .collect();
+
+    let keyboard_section = column(shortcut_rows).spacing(SPACE_XS);
+
+    let recording_hint: Element<'_, Message> = if settings.recording_action.is_some() {
+        text("Press any key combination to assign...")
+            .size(11)
+            .color(TEXT_MUTED)
+            .into()
+    } else {
+        container(text("")).into()
+    };
+
     // Action buttons
     let action_buttons = row![
         button(text("Cancel").size(14))
@@ -157,6 +231,10 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
         command_preview,
         custom_command_section,
         iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
+        keyboard_section_title,
+        keyboard_section,
+        recording_hint,
+        iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
         data_section_title,
         export_button,
         iced::widget::Space::new().height(Length::Fixed(SPACE_MD)),
@@ -164,7 +242,7 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
     ]
     .spacing(SPACE_MD)
     .padding(SPACE_MD)
-    .width(Length::Fixed(450.0));
+    .width(Length::Fixed(500.0));
 
     let modal_dialog = container(modal_content).style(modal_dialog_style);
 

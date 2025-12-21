@@ -7,8 +7,8 @@ use crate::icons;
 use crate::message::Message;
 use crate::snippet::TextData;
 use crate::theme::{
-    card_style, danger_button_style, subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM,
-    SPACE_XS, TEXT_MUTED, TEXT_SECONDARY,
+    card_style, danger_button_style, subtle_button_style, BG_SURFACE, SPACE_MD, SPACE_SM, SPACE_XS,
+    TEXT_MUTED, TEXT_SECONDARY,
 };
 
 /// Render a text snippet card.

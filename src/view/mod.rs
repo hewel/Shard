@@ -155,12 +155,10 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     .align_y(iced::Alignment::Center);
 
     // Combined header
-    let header = container(
-        column![header_row_1, header_row_2].spacing(SPACE_SM),
-    )
-    .width(Length::Fill)
-    .padding([SPACE_MD, SPACE_MD])
-    .style(header_style);
+    let header = container(column![header_row_1, header_row_2].spacing(SPACE_SM))
+        .width(Length::Fill)
+        .padding([SPACE_MD, SPACE_MD])
+        .style(header_style);
 
     // Error message
     let error_text: Element<'_, Message> = if let Some(error) = input_error {
@@ -332,12 +330,10 @@ fn view_add_menu_dropdown() -> Element<'static, Message> {
     .style(dropdown_item_style);
 
     // Menu container
-    let menu = container(
-        column![color_item, code_item, text_item].spacing(2),
-    )
-    .padding(SPACE_XS)
-    .width(Length::Fixed(140.0))
-    .style(dropdown_menu_style);
+    let menu = container(column![color_item, code_item, text_item].spacing(2))
+        .padding(SPACE_XS)
+        .width(Length::Fixed(140.0))
+        .style(dropdown_menu_style);
 
     // Position menu at top-right using container alignment
     let positioned_menu = container(menu)

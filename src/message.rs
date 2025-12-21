@@ -1,6 +1,6 @@
 //! Application messages for the Shard snippet manager.
 
-use crate::config::EditorPreset;
+use crate::config::{EditorPreset, Shortcut, ShortcutAction};
 use crate::snippet::{Snippet, SnippetKind};
 use crate::view::PickerMode;
 
@@ -96,4 +96,10 @@ pub enum Message {
     // === Add Menu Dropdown ===
     ToggleAddMenu,
     CloseAddMenu,
+
+    // === Settings - Keyboard Shortcuts ===
+    StartRecordingShortcut(ShortcutAction),
+    StopRecordingShortcut,
+    ShortcutRecorded(ShortcutAction, Shortcut),
+    ResetShortcutToDefault(ShortcutAction),
 }

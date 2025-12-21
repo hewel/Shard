@@ -138,31 +138,19 @@ impl Snippet {
     /// Create a new color snippet.
     pub fn color(r: u8, g: u8, b: u8, a: f32, label: String) -> Self {
         let color_data = ColorData::new(r, g, b, a);
-        let label = if label.is_empty() {
-            nanoid!(8)
-        } else {
-            label
-        };
+        let label = if label.is_empty() { nanoid!(8) } else { label };
         Self::new(label, SnippetContent::Color(color_data))
     }
 
     /// Create a new code snippet.
     pub fn code(code: String, language: String, label: String) -> Self {
-        let label = if label.is_empty() {
-            nanoid!(8)
-        } else {
-            label
-        };
+        let label = if label.is_empty() { nanoid!(8) } else { label };
         Self::new(label, SnippetContent::Code(CodeData::new(code, language)))
     }
 
     /// Create a new text snippet.
     pub fn text(text: String, label: String) -> Self {
-        let label = if label.is_empty() {
-            nanoid!(8)
-        } else {
-            label
-        };
+        let label = if label.is_empty() { nanoid!(8) } else { label };
         Self::new(label, SnippetContent::Text(TextData::new(text)))
     }
 
