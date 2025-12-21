@@ -21,3 +21,15 @@
 
 - See `@doc/requirements.md` for feature specs (Smart Editor, Snippets).
 - See `@doc/best-practices.md` for Iced-specific implementation details.
+
+## Icons
+
+Uses Phosphor-Light font (`fonts/Phosphor-Light.ttf`). Icon functions in `src/icons.rs`.
+
+Available icons (see `fonts/style.css` for full list):
+- `pencil`, `x`, `copy`, `trash`, `plus`, `check`
+- `magnifying_glass`, `floppy_disk`, `clipboard`, `eye`
+- `funnel`, `arrow_clockwise`, `x_circle`, `code`, `text_icon`
+- `arrow_square_out`, `gear`, `palette`, `tag`, `folder`
+
+To add new icons: find unicode in `fonts/style.css` (e.g., `.ph-light.ph-icon-name:before { content: "\eXXX"; }`), add function to `icons.rs`.
