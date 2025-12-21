@@ -112,7 +112,7 @@ pub fn arrow_square_out() -> text::Text<'static> {
 
 /// Gear icon (for settings)
 pub fn gear() -> text::Text<'static> {
-    icon('\u{e270}')
+    icon('\u{e87c}')
 }
 
 /// Tag icon (for palettes/categories)

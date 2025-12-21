@@ -77,15 +77,33 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
         new_palette_name,
     } = ctx;
 
-    // Add button (plus icon) that toggles dropdown
-    let add_button = button(icons::plus().size(12))
-        .on_press(Message::ToggleAddMenu)
+    // === HEADER: Primary Actions + Filters + Tools ===
+
+    // 1. Primary Actions (Left)
+    // Add button: Prominent "New" button with label for clarity
+    let add_button = button(
+        row![icons::plus().size(14), text("New").size(13)]
+            .spacing(SPACE_XS)
+            .align_y(iced::Alignment::Center),
+    )
+    .on_press(Message::ToggleAddMenu)
+    .padding([SPACE_SM, SPACE_SM])
+    .style(primary_button_style);
+
+    // Search input: Wider and integrated
+    let filter_input = text_input("Search snippets...", filter_text)
+        .on_input(Message::FilterChanged)
+        .width(Length::Fixed(240.0))
         .padding([SPACE_XS, SPACE_SM])
-        .style(primary_button_style);
+        .size(13)
+        .style(|theme, status| input_style(theme, status, false));
 
-    // === HEADER: Tabs + Filter + Clipboard + Settings ===
+    let primary_group = row![add_button, filter_input]
+        .spacing(SPACE_MD)
+        .align_y(iced::Alignment::Center);
 
-    // Tab filter buttons
+    // 2. Filters (Center)
+    // Tab filter buttons - Segmented control style
     let tab_row = row![
         tab_button(
             "All",
@@ -113,51 +131,77 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     // Palette filter dropdown
     let palette_filter = view_palette_filter(palettes, filter_palette);
 
-    // Filter input
-    let filter_input = text_input("Search...", filter_text)
-        .on_input(Message::FilterChanged)
-        .width(Length::Fixed(160.0))
-        .padding([SPACE_XS, SPACE_SM])
-        .size(13)
-        .style(|theme, status| input_style(theme, status, false));
+    // Vertical Divider
+    let divider = || {
+        container(text(" "))
+            .width(1.0)
+            .height(16.0)
+            .style(|_t| {
+                iced::widget::container::Style::default().background(crate::theme::BORDER_SUBTLE)
+            })
+    };
 
-    // Clipboard toggle
-    let clipboard_toggle = container(
+    let filter_group = row![tab_row, divider(), palette_filter]
+        .spacing(SPACE_MD)
+        .align_y(iced::Alignment::Center);
+
+    // 3. Settings & Tools (Right)
+    // Clipboard toggle - Button style for cleaner look
+    let clipboard_toggle = button(
         row![
-            checkbox(is_listening_clipboard).on_toggle(Message::ToggleClipboard),
-            text("Auto-capture").size(12).color(TEXT_MUTED),
+            if is_listening_clipboard {
+                icons::check().size(14)
+            } else {
+                icons::clipboard().size(14)
+            },
+            text("Auto-capture").size(12)
         ]
-        .spacing(SPACE_XS)
+        .spacing(SPACE_SM)
         .align_y(iced::Alignment::Center),
     )
-    .padding([SPACE_XS, SPACE_SM]);
+    .on_press(Message::ToggleClipboard(!is_listening_clipboard))
+    .padding([SPACE_SM, SPACE_MD])
+    .style(if is_listening_clipboard {
+        secondary_button_style
+    } else {
+        subtle_button_style
+    });
 
     // Settings button
     let settings_button = button(icons::gear().size(16))
         .on_press(Message::OpenSettings)
-        .padding([SPACE_XS, SPACE_SM])
+        .padding([SPACE_SM, SPACE_MD])
         .style(subtle_button_style);
 
-    // Spacer to push right-side elements
-    let spacer = container(text("")).width(Length::Fill);
+    let tools_group = row![clipboard_toggle, settings_button]
+        .spacing(SPACE_SM)
+        .align_y(iced::Alignment::Center);
+
+    // Spacers for layout distribution
+    let left_spacer = container(text("")).width(Length::Fill);
+    let right_spacer = container(text("")).width(Length::Shrink);
 
     let header_row = row![
-        tab_row,
-        palette_filter,
-        spacer,
-        filter_input,
-        clipboard_toggle,
-        settings_button,
-        add_button,
+        primary_group,
+        left_spacer,
+        filter_group,
+        right_spacer,
+        tools_group,
     ]
     .spacing(SPACE_SM)
     .align_y(iced::Alignment::Center);
 
-    // Header container
+    // Header container with bottom border
     let header = container(header_row)
         .width(Length::Fill)
-        .padding([SPACE_MD, SPACE_MD])
-        .style(header_style);
+        .padding([SPACE_SM, SPACE_MD])
+        .style(|theme| {
+            let mut style = header_style(theme);
+            style.border.width = 1.0;
+            style.border.color = crate::theme::BORDER_SUBTLE;
+            style.border.radius = 0.0.into();
+            style
+        });
 
     // Filter snippets
     let filtered_snippets: Vec<&Snippet> = snippets
@@ -343,8 +387,8 @@ fn view_add_menu_dropdown() -> Element<'static, Message> {
     // Position menu at top-right using container alignment
     let positioned_menu = container(menu)
         .width(Length::Fill)
-        .padding(iced::Padding::new(0.0).top(52.0).right(SPACE_MD))
-        .align_x(iced::alignment::Horizontal::Right);
+        .padding(iced::Padding::new(0.0).top(52.0).left(SPACE_MD))
+        .align_x(iced::alignment::Horizontal::Left);
 
     // Click-outside-to-close overlay (transparent, minimal overhead)
     mouse_area(positioned_menu)
