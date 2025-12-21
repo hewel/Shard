@@ -32,6 +32,64 @@ pub const RADIUS_MD: f32 = 8.0;
 pub const RADIUS_LG: f32 = 12.0;
 pub const RADIUS_XL: f32 = 16.0;
 
+// === Parallel Corner Radius Utilities ===
+
+/// Calculates the inner corner radius to maintain visual parallelism with an outer corner.
+///
+/// When nesting rounded rectangles (e.g., a card with padding containing an inner element),
+/// the inner element's corner radius must be reduced by the spacing/border thickness to
+/// ensure both curves appear visually parallel.
+///
+/// # Formula
+/// `inner_radius = max(0, outer_radius - thickness)`
+///
+/// # Arguments
+/// * `outer_radius` - The corner radius of the outer container
+/// * `thickness` - The spacing between outer and inner edges (padding, border, margin)
+///
+/// # Returns
+/// The calculated inner radius, clamped to a minimum of 0.0
+///
+/// # Example
+/// ```
+/// let outer = 16.0;
+/// let padding = 8.0;
+/// let inner = parallel_inner_radius(outer, padding);
+/// assert_eq!(inner, 8.0); // Inner corners will appear parallel to outer
+/// ```
+#[inline]
+pub fn parallel_inner_radius(outer_radius: f32, thickness: f32) -> f32 {
+    (outer_radius - thickness).max(0.0)
+}
+
+/// Calculates inner corner radii for all four corners to maintain visual parallelism.
+///
+/// This is useful when corners have different radii (e.g., top corners rounded, bottom square).
+///
+/// # Arguments
+/// * `outer_radii` - Array of outer radii in order: [top-left, top-right, bottom-right, bottom-left]
+/// * `thickness` - The uniform spacing between outer and inner edges
+///
+/// # Returns
+/// Array of inner radii, each clamped to a minimum of 0.0
+///
+/// # Example
+/// ```
+/// let outer = [16.0, 16.0, 0.0, 0.0]; // Rounded top, square bottom
+/// let padding = 8.0;
+/// let inner = parallel_inner_radii(outer, padding);
+/// assert_eq!(inner, [8.0, 8.0, 0.0, 0.0]);
+/// ```
+#[inline]
+pub fn parallel_inner_radii(outer_radii: [f32; 4], thickness: f32) -> [f32; 4] {
+    [
+        (outer_radii[0] - thickness).max(0.0),
+        (outer_radii[1] - thickness).max(0.0),
+        (outer_radii[2] - thickness).max(0.0),
+        (outer_radii[3] - thickness).max(0.0),
+    ]
+}
+
 // === Style Functions ===
 
 /// Card container style
