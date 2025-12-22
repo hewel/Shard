@@ -79,10 +79,30 @@ impl Default for Shard {
 
 impl Shard {
     /// Create a new application instance.
+    /// Opens the main window on startup (daemon mode doesn't open windows automatically).
     pub fn new() -> (Self, Task<Message>) {
         let load_snippets = Task::perform(async { db::load_snippets() }, Message::SnippetsLoaded);
         let load_palettes = Task::perform(async { db::load_palettes() }, Message::PalettesLoaded);
-        (Self::default(), Task::batch([load_snippets, load_palettes]))
+        
+        // Open main window (daemon mode requires explicit window creation)
+        let (main_window_id, open_main) = window::open(window::Settings {
+            size: iced::Size::new(900.0, 700.0),
+            position: window::Position::Centered,
+            ..window::Settings::default()
+        });
+        
+        // Create state with main window tracked
+        let mut state = Self::default();
+        state.windows.insert(main_window_id, WindowKind::Main);
+        
+        (
+            state,
+            Task::batch([
+                load_snippets,
+                load_palettes,
+                open_main.map(Message::WindowOpened),
+            ]),
+        )
     }
 
     /// Handle application messages.

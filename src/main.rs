@@ -16,48 +16,84 @@ mod widgets;
 
 use config::{Modifiers, Shortcut};
 use iced::keyboard;
+use iced::window;
 use iced::{Element, Subscription, Theme};
 
 pub use message::Message;
-pub use update::Shard;
+pub use update::{Shard, WindowKind};
 
 pub fn main() -> iced::Result {
-    iced::application(Shard::new, Shard::update, Shard::view)
-        .title("Shard - Snippet Manager")
+    iced::daemon(Shard::new, Shard::update, Shard::view)
         .font(icons::ICON_FONT_BYTES)
         .font(icons::TEXT_FONT_BYTES)
         .default_font(icons::TEXT_FONT)
+        .title(Shard::title)
         .theme(Shard::theme)
         .subscription(Shard::subscription)
         .run()
 }
 
 impl Shard {
-    /// Render the application view.
-    pub fn view(&self) -> Element<'_, Message> {
-        view::view(view::ViewContext {
-            snippets: &self.snippets,
-            is_listening_clipboard: self.is_listening_clipboard,
-            status_message: self.status_message.as_deref(),
-            filter_text: &self.filter_text,
-            filter_kind: self.filter_kind.as_ref(),
-            selected_snippet: self.selected_snippet,
-            color_picker: self.color_picker.as_ref(),
-            code_editor: self.code_editor.as_ref(),
-            text_editor: self.text_editor.as_ref(),
-            settings: self.settings.as_ref(),
-            add_menu_open: self.add_menu_open,
-            palettes: &self.palettes,
-            filter_palette: self.filter_palette,
-            palette_manager_open: self.palette_manager_open,
-            palette_dropdown_snippet: self.palette_dropdown_snippet,
-            snippet_palettes: &self.snippet_palettes,
-            new_palette_name: &self.new_palette_name,
-        })
+    /// Render the application view for a specific window.
+    pub fn view(&self, window_id: window::Id) -> Element<'_, Message> {
+        // Check if this is a pinned window or the main window
+        match self.windows.get(&window_id) {
+            Some(WindowKind::Pinned(snippet_id)) => {
+                // Render pinned snippet view (minimal)
+                self.view_pinned_snippet(*snippet_id, window_id)
+            }
+            Some(WindowKind::Main) | None => {
+                // Render main application view
+                view::view(view::ViewContext {
+                    snippets: &self.snippets,
+                    is_listening_clipboard: self.is_listening_clipboard,
+                    status_message: self.status_message.as_deref(),
+                    filter_text: &self.filter_text,
+                    filter_kind: self.filter_kind.as_ref(),
+                    selected_snippet: self.selected_snippet,
+                    color_picker: self.color_picker.as_ref(),
+                    code_editor: self.code_editor.as_ref(),
+                    text_editor: self.text_editor.as_ref(),
+                    settings: self.settings.as_ref(),
+                    add_menu_open: self.add_menu_open,
+                    palettes: &self.palettes,
+                    filter_palette: self.filter_palette,
+                    palette_manager_open: self.palette_manager_open,
+                    palette_dropdown_snippet: self.palette_dropdown_snippet,
+                    snippet_palettes: &self.snippet_palettes,
+                    new_palette_name: &self.new_palette_name,
+                })
+            }
+        }
     }
 
-    /// Get the application theme.
-    pub fn theme(&self) -> Theme {
+    /// Render a pinned snippet window (placeholder for now).
+    fn view_pinned_snippet(&self, snippet_id: i64, _window_id: window::Id) -> Element<'_, Message> {
+        use iced::widget::{center, text};
+        
+        if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
+            center(text(format!("Pinned: {}", snippet.label)).size(14)).into()
+        } else {
+            center(text("Snippet not found").size(14)).into()
+        }
+    }
+
+    /// Get the window title for a specific window.
+    pub fn title(&self, window_id: window::Id) -> String {
+        match self.windows.get(&window_id) {
+            Some(WindowKind::Pinned(snippet_id)) => {
+                if let Some(snippet) = self.snippets.iter().find(|s| s.id == *snippet_id) {
+                    format!("📌 {}", snippet.label)
+                } else {
+                    "Pinned Snippet".to_string()
+                }
+            }
+            Some(WindowKind::Main) | None => "Shard - Snippet Manager".to_string(),
+        }
+    }
+
+    /// Get the application theme for a specific window.
+    pub fn theme(&self, _window_id: window::Id) -> Theme {
         Theme::Dark
     }
 
