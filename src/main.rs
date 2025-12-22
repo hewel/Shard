@@ -142,7 +142,10 @@ impl Shard {
             Subscription::none()
         };
 
-        Subscription::batch([keyboard_sub, clipboard_sub])
+        // Subscribe to window close events
+        let window_close_sub = window::close_events().map(Message::WindowClosed);
+
+        Subscription::batch([keyboard_sub, clipboard_sub, window_close_sub])
     }
 }
 

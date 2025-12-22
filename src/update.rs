@@ -980,16 +980,23 @@ impl Shard {
 
             // === Window Management ===
             Message::WindowOpened(id) => {
-                // Window opened - will be handled in Step 2
-                // For now, just log
-                self.status_message = Some(format!("Window {:?} opened", id));
+                // Window successfully opened
+                self.status_message = Some(format!("Window {:?} ready", id));
                 Task::none()
             }
 
             Message::WindowClosed(id) => {
-                // Window closed - will be handled in Step 3
+                // Check if this was the main window
+                let was_main = matches!(self.windows.get(&id), Some(WindowKind::Main));
                 self.windows.remove(&id);
-                Task::none()
+
+                if was_main {
+                    // Main window closed - exit the application
+                    iced::exit()
+                } else {
+                    // Pinned window closed - just remove from tracking
+                    Task::none()
+                }
             }
 
             Message::PinSnippet(_snippet_id) => {
