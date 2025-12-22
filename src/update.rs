@@ -1020,9 +1020,9 @@ impl Shard {
                 if self.snippets.iter().any(|s| s.id == snippet_id) {
                     // Open a new always-on-top window for the snippet
                     let (pinned_id, open_task) = window::open(window::Settings {
-                        size: iced::Size::new(300.0, 150.0),
+                        size: iced::Size::new(400.0, 300.0),
                         position: window::Position::Centered,
-                        resizable: false,
+                        resizable: true,
                         decorations: true, // Keep decorations for now (title bar with close button)
                         level: window::Level::AlwaysOnTop,
                         ..window::Settings::default()
