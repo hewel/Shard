@@ -156,25 +156,24 @@ The app manages three types of snippets: Colors, Code, and Text.
     - [x] Config saved to `~/.config/shard/config.toml`
 
 ### Pinned Snippet Windows (Multi-Window)
-- [ ] **Architecture Migration**
-    - [ ] Migrate from `iced::application` to `iced::daemon`
-    - [ ] Add `window::Id` tracking with `BTreeMap<window::Id, WindowKind>`
-    - [ ] Open main window on startup via `window::open()`
-    - [ ] Modify `view()`, `title()`, `theme()` to accept `window::Id`
-    - [ ] Handle `window::close_events()` subscription
-- [ ] **Pin Feature**
-    - [ ] Add "Pin" button to snippet cards (all types)
-    - [ ] `Message::PinSnippet(snippet_id)` opens new always-on-top window
-    - [ ] Track pinned windows: `HashMap<window::Id, i64>` (snippet id)
-    - [ ] `Message::UnpinSnippet(window_id)` closes pinned window
-- [ ] **Pinned Window UI**
-    - [ ] Borderless (`decorations: false`)
-    - [ ] Always on top (`level: Level::AlwaysOnTop`)
-    - [ ] Small fixed size (~300x150 for code/text, ~100x100 for colors)
-    - [ ] Non-resizable
-    - [ ] Minimal content view (color swatch / code preview / text preview)
-    - [ ] Hover to reveal close/unpin button
-    - [ ] Click to copy snippet content
+- [x] **Architecture Migration**
+    - [x] Migrate from `iced::application` to `iced::daemon`
+    - [x] Add `window::Id` tracking with `BTreeMap<window::Id, WindowKind>`
+    - [x] Open main window on startup via `window::open()`
+    - [x] Modify `view()`, `title()`, `theme()` to accept `window::Id`
+    - [x] Handle `window::close_events()` subscription
+- [x] **Pin Feature**
+    - [x] Add "Pin" button to snippet cards (all types)
+    - [x] `Message::PinSnippet(snippet_id)` opens new always-on-top window
+    - [x] Track pinned windows: `BTreeMap<window::Id, WindowKind>`
+    - [x] `Message::UnpinSnippet(window_id)` closes pinned window
+- [x] **Pinned Window UI**
+    - [x] Always on top (`level: Level::AlwaysOnTop`)
+    - [x] Small fixed size (300x150)
+    - [x] Non-resizable
+    - [x] Minimal content view (color swatch / code preview / text preview)
+    - [x] Close/unpin button
+    - [x] Copy button for snippet content
 
 ### Advanced Features
 - [ ] Color harmony suggestions (complementary, triadic, etc.)
