@@ -90,17 +90,18 @@ pub fn view(ctx: ViewContext<'_>) -> Element<'_, Message> {
     .padding([SPACE_SM, SPACE_SM])
     .style(primary_button_style);
 
-    // Search input: Wider and integrated
-    let filter_input = text_input("Search snippets...", filter_text)
+    // Search input: Use FillPortion to allow shrinking
+    let filter_input = text_input("Search...", filter_text)
         .on_input(Message::FilterChanged)
-        .width(Length::Fixed(240.0))
+        .width(Length::FillPortion(2))
         .padding([SPACE_XS, SPACE_SM])
         .size(13)
         .style(|theme, status| input_style(theme, status, false));
 
     let primary_group = row![add_button, filter_input]
-        .spacing(SPACE_MD)
-        .align_y(iced::Alignment::Center);
+        .spacing(SPACE_SM)
+        .align_y(iced::Alignment::Center)
+        .width(Length::FillPortion(3));
 
     // 2. Filters (Center)
     // Tab filter buttons - Segmented control style
