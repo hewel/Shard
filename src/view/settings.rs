@@ -112,6 +112,8 @@ fn view_shortcut_row<'a>(
 pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
     // Header
     let header_row = row![
+        icons::gear().size(20).color(TEXT_PRIMARY),
+        iced::widget::Space::new().width(SPACE_SM),
         text("Settings").size(20).color(TEXT_PRIMARY),
         iced::widget::Space::new().width(Length::Fill),
         button(icons::x().size(16))
@@ -119,11 +121,16 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
     ]
-    .padding(iced::Padding::new(SPACE_XS).vertical(SPACE_SM).left(SPACE_MD))
+    .padding(iced::Padding::new(SPACE_XS).top(SPACE_SM).bottom(0.0).left(SPACE_MD))
     .align_y(iced::Alignment::Center);
 
     // Editor section title
-    let editor_section_title = text("External Editor").size(14).color(TEXT_SECONDARY);
+    let editor_section_title = row![
+        icons::arrow_square_out().size(14).color(TEXT_SECONDARY),
+        text("External Editor").size(14).color(TEXT_SECONDARY),
+    ]
+    .spacing(SPACE_SM)
+    .align_y(iced::Alignment::Center);
 
     // Editor preset selection - radio-like buttons
     let preset_buttons: Vec<Element<'_, Message>> = EDITOR_PRESETS
@@ -192,7 +199,12 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
         };
 
     // Color Picker section
-    let picker_section_title = text("Color Picker").size(14).color(TEXT_SECONDARY);
+    let picker_section_title = row![
+        icons::swatches().size(14).color(TEXT_SECONDARY),
+        text("Color Picker").size(14).color(TEXT_SECONDARY),
+    ]
+    .spacing(SPACE_SM)
+    .align_y(iced::Alignment::Center);
 
     let picker_mode_buttons = row![
         button(text("HSL").size(12))
@@ -219,7 +231,12 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
         .color(TEXT_MUTED);
 
     // Data section - Export/Import
-    let data_section_title = text("Data").size(14).color(TEXT_SECONDARY);
+    let data_section_title = row![
+        icons::export().size(14).color(TEXT_SECONDARY),
+        text("Data").size(14).color(TEXT_SECONDARY),
+    ]
+    .spacing(SPACE_SM)
+    .align_y(iced::Alignment::Center);
 
     let export_button = button(text("Export as JSON").size(12))
         .on_press(Message::ExportSnippetsJson)
@@ -234,7 +251,12 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
     let data_buttons = row![export_button, import_button].spacing(SPACE_SM);
 
     // Keyboard shortcuts section
-    let keyboard_section_title = text("Keyboard Shortcuts").size(14).color(TEXT_SECONDARY);
+    let keyboard_section_title = row![
+        icons::keyboard().size(14).color(TEXT_SECONDARY),
+        text("Keyboard Shortcuts").size(14).color(TEXT_SECONDARY),
+    ]
+    .spacing(SPACE_SM)
+    .align_y(iced::Alignment::Center);
 
     let shortcut_rows: Vec<Element<'_, Message>> = ShortcutAction::ALL
         .iter()

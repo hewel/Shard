@@ -130,6 +130,26 @@ pub fn push_pin() -> text::Text<'static> {
     icon('\u{e3e2}')
 }
 
+/// Keyboard icon (for keyboard shortcuts)
+pub fn keyboard() -> text::Text<'static> {
+    icon('\u{e2d8}')
+}
+
+/// Swatches icon (for color picker settings)
+pub fn swatches() -> text::Text<'static> {
+    icon('\u{e5b8}')
+}
+
+/// Export icon (for data export)
+pub fn export() -> text::Text<'static> {
+    icon('\u{eaf0}')
+}
+
+/// Sliders icon (for settings/adjustments)
+pub fn sliders() -> text::Text<'static> {
+    icon('\u{e432}')
+}
+
 // === Icon constants for use in text widgets ===
 
 /// Code icon codepoint
