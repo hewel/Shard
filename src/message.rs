@@ -1,5 +1,7 @@
 //! Application messages for the Shard snippet manager.
 
+use iced::window;
+
 use crate::config::{EditorPreset, Shortcut, ShortcutAction};
 use crate::db::Palette;
 use crate::snippet::{Snippet, SnippetKind};
@@ -8,6 +10,16 @@ use crate::view::PickerMode;
 /// All messages that can be sent in the application.
 #[derive(Debug, Clone)]
 pub enum Message {
+    // === Window Management ===
+    /// A window was opened and is now ready.
+    WindowOpened(window::Id),
+    /// A window was closed.
+    WindowClosed(window::Id),
+    /// Pin a snippet to a new always-on-top window.
+    PinSnippet(i64),
+    /// Unpin (close) a pinned snippet window.
+    UnpinSnippet(window::Id),
+
     // === Initialization ===
     SnippetsLoaded(Result<Vec<Snippet>, String>),
     SnippetAdded(Result<Snippet, String>),

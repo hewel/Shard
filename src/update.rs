@@ -1,5 +1,8 @@
 //! Update logic for the Shard application.
 
+use std::collections::BTreeMap;
+
+use iced::window;
 use iced::Task;
 
 use crate::config::{Config, KeyboardConfig};
@@ -13,8 +16,19 @@ use crate::view::{
     CodeEditorState, ColorPickerState, PickerMode, SettingsState, TextEditorState,
 };
 
+/// Represents the kind of window in the application.
+#[derive(Debug, Clone)]
+pub enum WindowKind {
+    /// The main application window.
+    Main,
+    /// A pinned snippet window displaying a specific snippet.
+    Pinned(i64), // snippet_id
+}
+
 /// Application state.
 pub struct Shard {
+    /// Tracks all open windows and their kind.
+    pub windows: BTreeMap<window::Id, WindowKind>,
     pub snippets: Vec<Snippet>,
     pub is_listening_clipboard: bool,
     pub last_clipboard_content: Option<String>,
@@ -39,6 +53,7 @@ pub struct Shard {
 impl Default for Shard {
     fn default() -> Self {
         Self {
+            windows: BTreeMap::new(),
             snippets: Vec::new(),
             is_listening_clipboard: false,
             last_clipboard_content: None,
@@ -941,6 +956,32 @@ impl Shard {
                     snippet_id
                 };
                 Task::none()
+            }
+
+            // === Window Management ===
+            Message::WindowOpened(id) => {
+                // Window opened - will be handled in Step 2
+                // For now, just log
+                self.status_message = Some(format!("Window {:?} opened", id));
+                Task::none()
+            }
+
+            Message::WindowClosed(id) => {
+                // Window closed - will be handled in Step 3
+                self.windows.remove(&id);
+                Task::none()
+            }
+
+            Message::PinSnippet(_snippet_id) => {
+                // Pin snippet - will be implemented in Step 4
+                self.status_message = Some("Pin feature coming soon".to_string());
+                Task::none()
+            }
+
+            Message::UnpinSnippet(id) => {
+                // Close pinned window - will be implemented in Step 4
+                self.windows.remove(&id);
+                window::close(id)
             }
         }
     }
