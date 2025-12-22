@@ -67,15 +67,85 @@ impl Shard {
         }
     }
 
-    /// Render a pinned snippet window (placeholder for now).
-    fn view_pinned_snippet(&self, snippet_id: i64, _window_id: window::Id) -> Element<'_, Message> {
-        use iced::widget::{center, text};
-        
-        if let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) {
-            center(text(format!("Pinned: {}", snippet.label)).size(14)).into()
-        } else {
-            center(text("Snippet not found").size(14)).into()
-        }
+    /// Render a pinned snippet window.
+    fn view_pinned_snippet(&self, snippet_id: i64, window_id: window::Id) -> Element<'_, Message> {
+        use iced::widget::{button, center, column, container, row, text, Canvas};
+        use crate::snippet::SnippetContent;
+        use crate::theme::{
+            BG_BASE, SPACE_MD, SPACE_SM, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
+            danger_button_style,
+        };
+        use crate::widgets::ColorSwatch;
+
+        let Some(snippet) = self.snippets.iter().find(|s| s.id == snippet_id) else {
+            return center(text("Snippet not found").size(14).color(TEXT_MUTED)).into();
+        };
+
+        // Content based on snippet type
+        let content: Element<'_, Message> = match &snippet.content {
+            SnippetContent::Color(color) => {
+                // Large color swatch
+                let swatch = Canvas::new(ColorSwatch {
+                    color: color.to_iced_color(),
+                })
+                .width(80)
+                .height(80);
+
+                let hex_text = text(color.to_hex()).size(14).color(TEXT_PRIMARY);
+                let label_text = text(&snippet.label).size(12).color(TEXT_SECONDARY);
+
+                column![swatch, hex_text, label_text]
+                    .spacing(SPACE_SM)
+                    .align_x(iced::Alignment::Center)
+                    .into()
+            }
+            SnippetContent::Code(code) => {
+                let preview = code.preview(4);
+                let lang_text = text(&code.language).size(10).color(TEXT_MUTED);
+                let code_text = text(preview).size(11).color(TEXT_PRIMARY);
+                let label_text = text(&snippet.label).size(12).color(TEXT_SECONDARY);
+
+                column![label_text, lang_text, code_text]
+                    .spacing(SPACE_SM)
+                    .into()
+            }
+            SnippetContent::Text(text_data) => {
+                let preview = text_data.preview(4);
+                let preview_text = text(preview).size(11).color(TEXT_PRIMARY);
+                let label_text = text(&snippet.label).size(12).color(TEXT_SECONDARY);
+
+                column![label_text, preview_text]
+                    .spacing(SPACE_SM)
+                    .into()
+            }
+        };
+
+        // Close button
+        let close_btn = button(icons::x().size(12))
+            .on_press(Message::UnpinSnippet(window_id))
+            .padding(SPACE_SM)
+            .style(danger_button_style);
+
+        // Copy button
+        let copy_btn = button(icons::copy().size(12))
+            .on_press(Message::CopySnippet(snippet_id))
+            .padding(SPACE_SM)
+            .style(crate::theme::subtle_button_style);
+
+        let header = row![copy_btn, close_btn]
+            .spacing(SPACE_SM)
+            .align_y(iced::Alignment::Center);
+
+        let layout = column![header, content]
+            .spacing(SPACE_SM)
+            .padding(SPACE_MD)
+            .align_x(iced::Alignment::Center);
+
+        container(layout)
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
+            .style(|_| iced::widget::container::Style::default().background(BG_BASE))
+            .into()
     }
 
     /// Get the window title for a specific window.

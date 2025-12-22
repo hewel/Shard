@@ -64,6 +64,10 @@ pub fn view_text_card<'a>(
             .on_press(Message::CopySnippet(id))
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
+        button(icons::push_pin().size(14))
+            .on_press(Message::PinSnippet(id))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
         button(icons::arrow_square_out().size(14))
             .on_press(Message::OpenInExternalEditor(id, false))
             .padding([SPACE_XS, SPACE_SM])

@@ -999,14 +999,32 @@ impl Shard {
                 }
             }
 
-            Message::PinSnippet(_snippet_id) => {
-                // Pin snippet - will be implemented in Step 4
-                self.status_message = Some("Pin feature coming soon".to_string());
-                Task::none()
+            Message::PinSnippet(snippet_id) => {
+                // Check if snippet exists
+                if self.snippets.iter().any(|s| s.id == snippet_id) {
+                    // Open a new always-on-top window for the snippet
+                    let (pinned_id, open_task) = window::open(window::Settings {
+                        size: iced::Size::new(300.0, 150.0),
+                        position: window::Position::Centered,
+                        resizable: false,
+                        decorations: true, // Keep decorations for now (title bar with close button)
+                        level: window::Level::AlwaysOnTop,
+                        ..window::Settings::default()
+                    });
+
+                    // Track the pinned window
+                    self.windows.insert(pinned_id, WindowKind::Pinned(snippet_id));
+                    self.status_message = Some("Snippet pinned".to_string());
+
+                    open_task.map(Message::WindowOpened)
+                } else {
+                    self.status_message = Some("Snippet not found".to_string());
+                    Task::none()
+                }
             }
 
             Message::UnpinSnippet(id) => {
-                // Close pinned window - will be implemented in Step 4
+                // Close pinned window
                 self.windows.remove(&id);
                 window::close(id)
             }

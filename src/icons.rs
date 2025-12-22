@@ -125,6 +125,11 @@ pub fn folder() -> text::Text<'static> {
     icon('\u{e24a}')
 }
 
+/// Push pin icon (for pinning snippets to always-on-top windows)
+pub fn push_pin() -> text::Text<'static> {
+    icon('\u{e3e2}')
+}
+
 // === Icon constants for use in text widgets ===
 
 /// Code icon codepoint

@@ -66,8 +66,12 @@ pub fn view_color_card<'a>(
     .spacing(SPACE_XS)
     .width(Length::Fill);
 
-    // Action buttons (edit, delete)
+    // Action buttons (pin, edit, delete)
     let action_row = row![
+        button(icons::push_pin().size(14))
+            .on_press(Message::PinSnippet(id))
+            .padding([SPACE_XS, SPACE_SM])
+            .style(subtle_button_style),
         button(icons::pencil().size(14))
             .on_press(Message::OpenColorPicker(Some(id)))
             .padding([SPACE_XS, SPACE_SM])
