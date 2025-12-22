@@ -1,13 +1,15 @@
 //! Settings modal for application configuration.
 
-use iced::widget::{button, column, container, mouse_area, opaque, row, text, text_input};
+use iced::widget::{
+    button, column, container, mouse_area, opaque, row, scrollable, text, text_input,
+};
 use iced::{Element, Length};
 
 use crate::config::{Config, EditorPreset, KeyboardConfig, ShortcutAction};
 use crate::icons;
 use crate::message::Message;
 use crate::theme::{
-    input_style, modal_dialog_style, modal_overlay_style, primary_button_style,
+    input_style, modal_dialog_style, modal_overlay_style, primary_button_style, scrollbar_style,
     secondary_button_style, subtle_button_style, SPACE_MD, SPACE_SM, SPACE_XS, TEXT_MUTED,
     TEXT_PRIMARY, TEXT_SECONDARY,
 };
@@ -117,6 +119,7 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
             .padding([SPACE_XS, SPACE_SM])
             .style(subtle_button_style),
     ]
+    .padding(iced::Padding::new(SPACE_XS).vertical(SPACE_SM).left(SPACE_MD))
     .align_y(iced::Alignment::Center);
 
     // Editor section title
@@ -251,6 +254,7 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
 
     // Action buttons
     let action_buttons = row![
+        iced::widget::Space::new().width(Length::Fill),
         button(text("Cancel").size(14))
             .on_press(Message::CloseSettings)
             .padding(SPACE_SM)
@@ -260,34 +264,48 @@ pub fn view_settings_modal(settings: &SettingsState) -> Element<'_, Message> {
             .padding(SPACE_SM)
             .style(primary_button_style),
     ]
-    .spacing(SPACE_SM);
+    .spacing(SPACE_SM)
+    .padding([SPACE_SM, SPACE_MD]);
 
-    // Modal content
+    // Scrollable content (everything between header and action buttons)
+    let scrollable_content = scrollable(
+        column![
+            editor_section_title,
+            preset_row,
+            command_preview,
+            custom_command_section,
+            iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
+            picker_section_title,
+            picker_mode_buttons,
+            picker_hint,
+            iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
+            keyboard_section_title,
+            keyboard_section,
+            recording_hint,
+            iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
+            data_section_title,
+            data_buttons,
+        ]
+        .spacing(SPACE_MD)
+        .padding(SPACE_MD),
+    )
+    .height(Length::FillPortion(1))
+    .width(Length::Fill)
+    .style(scrollbar_style);
+
+    // Modal content with fixed header and footer, scrollable middle
     let modal_content = column![
         header_row,
-        editor_section_title,
-        preset_row,
-        command_preview,
-        custom_command_section,
+        scrollable_content,
         iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
-        picker_section_title,
-        picker_mode_buttons,
-        picker_hint,
-        iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
-        keyboard_section_title,
-        keyboard_section,
-        recording_hint,
-        iced::widget::Space::new().height(Length::Fixed(SPACE_SM)),
-        data_section_title,
-        data_buttons,
-        iced::widget::Space::new().height(Length::Fixed(SPACE_MD)),
         action_buttons,
     ]
     .spacing(SPACE_MD)
-    .padding(SPACE_MD)
     .width(Length::Fixed(500.0));
 
-    let modal_dialog = container(modal_content).style(modal_dialog_style);
+    let modal_dialog = container(modal_content)
+        .max_height(600.0)
+        .style(modal_dialog_style);
 
     // Semi-transparent overlay
     let overlay = mouse_area(
