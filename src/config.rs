@@ -122,6 +122,7 @@ pub enum ShortcutAction {
     NewColor,
     Escape,
     Delete,
+    CopySnippet,
 }
 
 impl ShortcutAction {
@@ -132,15 +133,17 @@ impl ShortcutAction {
             ShortcutAction::NewColor => "New Color Input",
             ShortcutAction::Escape => "Close / Cancel",
             ShortcutAction::Delete => "Delete Selected",
+            ShortcutAction::CopySnippet => "Copy Snippet",
         }
     }
 
     /// All available actions.
-    pub const ALL: [ShortcutAction; 4] = [
+    pub const ALL: [ShortcutAction; 5] = [
         ShortcutAction::Paste,
         ShortcutAction::NewColor,
         ShortcutAction::Escape,
         ShortcutAction::Delete,
+        ShortcutAction::CopySnippet,
     ];
 }
 
@@ -151,6 +154,12 @@ pub struct KeyboardConfig {
     pub new_color: Shortcut,
     pub escape: Shortcut,
     pub delete: Shortcut,
+    #[serde(default = "default_copy_snippet_shortcut")]
+    pub copy_snippet: Shortcut,
+}
+
+fn default_copy_snippet_shortcut() -> Shortcut {
+    Shortcut::char_key('c', Modifiers::ctrl())
 }
 
 impl Default for KeyboardConfig {
@@ -160,6 +169,7 @@ impl Default for KeyboardConfig {
             new_color: Shortcut::char_key('n', Modifiers::ctrl()),
             escape: Shortcut::named("Escape", Modifiers::none()),
             delete: Shortcut::named("Delete", Modifiers::none()),
+            copy_snippet: default_copy_snippet_shortcut(),
         }
     }
 }
@@ -172,6 +182,7 @@ impl KeyboardConfig {
             ShortcutAction::NewColor => &self.new_color,
             ShortcutAction::Escape => &self.escape,
             ShortcutAction::Delete => &self.delete,
+            ShortcutAction::CopySnippet => &self.copy_snippet,
         }
     }
 
@@ -182,6 +193,7 @@ impl KeyboardConfig {
             ShortcutAction::NewColor => self.new_color = shortcut,
             ShortcutAction::Escape => self.escape = shortcut,
             ShortcutAction::Delete => self.delete = shortcut,
+            ShortcutAction::CopySnippet => self.copy_snippet = shortcut,
         }
     }
 }

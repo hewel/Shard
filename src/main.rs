@@ -201,6 +201,8 @@ impl Shard {
                     Some(Message::EscapePressed)
                 } else if keyboard_config.delete.matches(&key, modifiers) {
                     Some(Message::DeleteSelectedSnippet)
+                } else if keyboard_config.copy_snippet.matches(&key, modifiers) {
+                    Some(Message::CopySelectedSnippet)
                 } else {
                     None
                 }

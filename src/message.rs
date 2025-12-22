@@ -55,6 +55,7 @@ pub enum Message {
     PasteContentReceived(Option<String>),
     EscapePressed,
     DeleteSelectedSnippet,
+    CopySelectedSnippet,
 
     // === Color Picker ===
     OpenColorPicker(Option<i64>), // None = new color, Some(id) = edit existing

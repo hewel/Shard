@@ -413,6 +413,22 @@ impl Shard {
                 }
             }
 
+            Message::CopySelectedSnippet => {
+                if let Some(id) = self.selected_snippet {
+                    if let Some(snippet) = self.snippets.iter().find(|s| s.id == id) {
+                        let text = snippet.content.to_copyable_string();
+                        Task::perform(
+                            async move { copy_to_clipboard(&text).await },
+                            Message::CopyFinished,
+                        )
+                    } else {
+                        Task::none()
+                    }
+                } else {
+                    Task::none()
+                }
+            }
+
             // === Color Picker Messages ===
             Message::OpenColorPicker(id) => {
                 self.add_menu_open = false;
